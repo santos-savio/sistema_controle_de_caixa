@@ -65,3 +65,38 @@ class TransactionItem(db.Model):
 
     def __repr__(self):
         return f"<Item {self.id} tx={self.transaction_id} product={self.product_id}>"
+
+
+class SystemConfig(db.Model):
+    __tablename__ = "system_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    value = db.Column(db.Text, nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Config {self.key}={self.value}>"
+
+    @classmethod
+    def get_value(cls, key, default=None):
+        """Get configuration value by key"""
+        config = cls.query.filter_by(key=key).first()
+        return config.value if config else default
+
+    @classmethod
+    def set_value(cls, key, value, description=None):
+        """Set configuration value by key"""
+        config = cls.query.filter_by(key=key).first()
+        if config:
+            config.value = value
+            if description:
+                config.description = description
+            config.updated_at = datetime.utcnow()
+        else:
+            config = cls(key=key, value=value, description=description)
+            db.session.add(config)
+        db.session.commit()
+        return config

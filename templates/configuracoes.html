@@ -291,9 +291,8 @@
         
         <div class="navigation">
             <a href="/">Registrar Venda</a>
-            <a href="/relatorios">Relatórios</a>
+            <a href="/relatorios">Admin</a>
             <a href="/configuracoes">Configurações</a>
-            <a href="/resumo">Resumo</a>
         </div>
         
         <div id="messages"></div>
@@ -336,6 +335,7 @@
                 <button class="btn" onclick="abrirModalPin()">Alterar PIN</button>
             </div>
             <div id="pin-form" style="display: none;">
+                <div id="pin-form-messages"></div>
                 <div class="form-group">
                     <label for="pin-atual">PIN Atual:</label>
                     <input type="password" id="pin-atual" placeholder="Digite o PIN atual" maxlength="4">
@@ -379,12 +379,7 @@
             carregarProdutos();
             
             // Carregar PIN salvo
-            const pinSalvo = localStorage.getItem('pinResumo');
-            if (pinSalvo) {
-                document.getElementById('pin-status').textContent = '●●●●';
-            } else {
-                document.getElementById('pin-status').textContent = 'Não definido';
-            }
+            carregarPinStatus();
         }
 
         function renderizarCampos() {
@@ -430,20 +425,52 @@
                 camposConfig = [...camposPadrao];
                 renderizarCampos();
                 localStorage.removeItem('camposConfig');
-                localStorage.removeItem('pinResumo');
-                document.getElementById('pin-status').textContent = 'Não definido';
+                // Não remove mais o PIN do banco, apenas atualiza a interface
+                carregarPinStatus();
                 showMessage('Configurações restauradas com sucesso!', 'success');
             }
+        }
+
+        function carregarPinStatus() {
+            fetch('/api/pin')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.pin) {
+                        document.getElementById('pin-status').textContent = '●●●●';
+                    } else {
+                        document.getElementById('pin-status').textContent = 'Não definido';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar PIN:', error);
+                    document.getElementById('pin-status').textContent = 'Erro ao carregar';
+                });
+        }
+
+        function showMessagePinForm(message, type) {
+            const messagesDiv = document.getElementById('pin-form-messages');
+            messagesDiv.innerHTML = '';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            // Auto-remove após 5 segundos para sucesso, 10 para erro
+            setTimeout(() => {
+                messageDiv.remove();
+            }, type === 'success' ? 5000 : 10000);
         }
 
         function abrirModalPin() {
             const form = document.getElementById('pin-form');
             if (form.style.display === 'none') {
                 form.style.display = 'block';
-                // Limpar campos
+                // Limpar campos e mensagens
                 document.getElementById('pin-atual').value = '';
                 document.getElementById('pin-novo').value = '';
                 document.getElementById('pin-confirmar').value = '';
+                document.getElementById('pin-form-messages').innerHTML = '';
             } else {
                 form.style.display = 'none';
             }
@@ -457,29 +484,74 @@
             const pinAtual = document.getElementById('pin-atual').value;
             const pinNovo = document.getElementById('pin-novo').value;
             const pinConfirmar = document.getElementById('pin-confirmar').value;
-            const pinSalvo = localStorage.getItem('pinResumo');
             
             // Validações
-            if (pinSalvo && pinAtual !== pinSalvo) {
-                showMessage('PIN atual incorreto!', 'error');
-                return;
-            }
-            
             if (pinNovo.length !== 4 || !/^\d{4}$/.test(pinNovo)) {
-                showMessage('Novo PIN deve ter exatamente 4 dígitos numéricos!', 'error');
+                showMessagePinForm('Novo PIN deve ter exatamente 4 dígitos numéricos!', 'error');
                 return;
             }
             
             if (pinNovo !== pinConfirmar) {
-                showMessage('Confirmação do PIN não confere!', 'error');
+                showMessagePinForm('Confirmação do PIN não confere!', 'error');
                 return;
             }
             
-            // Salvar novo PIN
-            localStorage.setItem('pinResumo', pinNovo);
-            document.getElementById('pin-status').textContent = '●●●●';
-            showMessage('PIN alterado com sucesso!', 'success');
-            document.getElementById('pin-form').style.display = 'none';
+            // Verificar PIN atual se não for o primeiro cadastro
+            if (pinAtual) {
+                fetch('/api/pin/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pin: pinAtual
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        showMessagePinForm('PIN atual incorreto!', 'error');
+                        return;
+                    }
+                    // Se o PIN atual estiver correto, salvar o novo
+                    salvarNovoPin(pinNovo);
+                })
+                .catch(error => {
+                    showMessagePinForm('Erro ao verificar PIN atual: ' + error, 'error');
+                });
+            } else {
+                // Se não há PIN atual, salvar direto
+                salvarNovoPin(pinNovo);
+            }
+        }
+
+        function salvarNovoPin(pinNovo) {
+            fetch('/api/pin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pin: pinNovo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessagePinForm('PIN alterado com sucesso!', 'success');
+                    document.getElementById('pin-status').textContent = '●●●●';
+                    // Fechar formulário após sucesso
+                    setTimeout(() => {
+                        document.getElementById('pin-form').style.display = 'none';
+                        document.getElementById('pin-form-messages').innerHTML = '';
+                    }, 2000);
+                } else {
+                    showMessagePinForm('Erro ao salvar PIN: ' + (data.error || 'Erro desconhecido'), 'error');
+                }
+            })
+            .catch(error => {
+                showMessagePinForm('Erro ao salvar PIN: ' + error, 'error');
+            });
         }
 
         function abrirModalProduto() {

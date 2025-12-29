@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatórios - Controle de Caixa</title>
+    <title>Admin - Controle de Caixa</title>
     <style>
         * {
             margin: 0;
@@ -271,27 +271,80 @@
             color: #666;
             font-weight: 500;
         }
+        
+        .cash-withdraw-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .cash-withdraw-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .withdraw-form {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        
+        .withdraw-form .form-group {
+            flex: 1;
+            min-width: 200px;
+            margin-bottom: 0;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Relatórios Financeiros</h1>
+        <h1>Painel Administrativo</h1>
         
         <div class="navigation">
             <a href="/">Registrar Venda</a>
-            <a href="/relatorios">Relatórios</a>
+            <a href="/relatorios">Admin</a>
             <a href="/configuracoes">Configurações</a>
         </div>
         
         <div id="pin-section" class="pin-container">
             <h3>Digite o PIN para acessar os relatórios</h3>
             <div id="pin-messages"></div>
-            <input type="password" id="pin-input" class="pin-input" placeholder="4 dígitos" maxlength="4">
+            <input type="password" id="pin-input" class="pin-input" placeholder="4 dígitos" maxlength="4" onkeypress="handlePinKeyPress(event)">
             <button class="btn btn-success" onclick="verificarPin()">Acessar</button>
         </div>
         
         <div id="content" style="display: none;">
             <div id="messages"></div>
+            
+            <div class="cash-withdraw-section">
+                <h3>Retirada de Caixa</h3>
+                <div class="withdraw-form">
+                    <div class="form-group">
+                        <label for="valor-retirada">Valor (R$):</label>
+                        <input type="number" id="valor-retirada" step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="motivo-retirada">Motivo:</label>
+                        <input type="text" id="motivo-retirada" placeholder="Descreva o motivo da retirada">
+                    </div>
+                    <button class="btn btn-danger" onclick="registrarRetirada()">Registrar Retirada</button>
+                    <div class="form-group" style="margin-left: auto; min-width: 150px;">
+                        <label>Saldo Atual:</label>
+                        <strong id="saldo-atual" style="color: #28a745; font-size: 18px;">Carregando...</strong>
+                    </div>
+                </div>
+            </div>
             
             <div class="filters-section">
                 <h3>Período do Relatório</h3>
@@ -319,8 +372,9 @@
                 <div class="actions-bar">
                     <div class="actions-left">
                         <button class="btn btn-success" onclick="gerarRelatorio()">Gerar Relatório</button>
+                        <button class="btn btn-primary" onclick="carregarTodasTransacoes()">Carregar Todas as Transações</button>
                         <button class="btn btn-secondary" onclick="limparFiltros()">Limpar Filtros</button>
-                        <button class="btn" onclick="exportarDados()" id="export-btn" style="display: none;">Exportar CSV</button>
+                        <button class="btn" onclick="exportarCSV()" id="export-btn" style="display: none;">Exportar CSV</button>
                     </div>
                     <div class="period-info" id="period-info"></div>
                 </div>
@@ -380,27 +434,148 @@
             }, 5000);
         }
         
+        function handlePinKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                verificarPin();
+            }
+        }
+        
         function verificarPin() {
             const pin = document.getElementById('pin-input').value;
-            const pinSalvo = localStorage.getItem('pinResumo');
             
-            if (!pinSalvo) {
-                showMessagePin('Nenhum PIN foi configurado ainda. Configure um PIN na página de configurações.', 'error');
+            if (!pin || pin.length !== 4) {
+                showMessagePin('Digite um PIN de 4 dígitos', 'error');
                 return;
             }
             
-            if (pin === pinSalvo && pin.length === 4) {
-                showMessagePin('PIN correto! Acessando relatórios...', 'success');
-                setTimeout(() => {
-                    document.getElementById('pin-section').style.display = 'none';
-                    document.getElementById('content').style.display = 'block';
-                    // Gerar relatório automaticamente com período padrão
-                    gerarRelatorio();
-                }, 1000);
-            } else {
-                showMessagePin('PIN incorreto! Tente novamente.', 'error');
-                document.getElementById('pin-input').value = '';
+            // Verificar PIN via API
+            fetch('/api/pin/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pin: pin
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessagePin('PIN correto! Acessando relatórios...', 'success');
+                    setTimeout(() => {
+                        document.getElementById('pin-section').style.display = 'none';
+                        document.getElementById('content').style.display = 'block';
+                        // Carregar saldo ao acessar
+                        atualizarSaldoCaixa();
+                        
+                        // Carregar produtos e gerar relatório inicial
+                        carregarProdutos();
+                        gerarRelatorio();
+                    }, 1000);
+                } else {
+                    showMessagePin(data.error || 'PIN incorreto! Tente novamente.', 'error');
+                    document.getElementById('pin-input').value = '';
+                }
+            })
+            .catch(error => {
+                showMessagePin('Erro ao verificar PIN: ' + error, 'error');
+            });
+        }
+        
+        function registrarRetirada() {
+            const valor = parseFloat(document.getElementById('valor-retirada').value);
+            const motivo = document.getElementById('motivo-retirada').value.trim();
+            
+            if (!valor || valor <= 0) {
+                showMessage('Digite um valor válido para a retirada', 'error');
+                return;
             }
+            
+            if (!motivo) {
+                showMessage('Digite o motivo da retirada', 'error');
+                return;
+            }
+            
+            // Obter saldo atual primeiro
+            fetch('/api/saldo-caixa')
+            .then(response => response.json())
+            .then(saldoData => {
+                const saldoAtual = saldoData.saldo || 0;
+                
+                // Validar saldo disponível
+                if (valor > saldoAtual) {
+                    showMessage(`Saldo insuficiente! Saldo disponível: R$ ${saldoAtual.toFixed(2)}`, 'error');
+                    return;
+                }
+                
+                // Calcular novo saldo
+                const novoSaldo = saldoAtual - valor;
+                
+                // Confirmar retirada com informações detalhadas
+                const confirmMessage = `Confirmar sangria de R$ ${valor.toFixed(2)}?` +
+                                      `\n\nMotivo: ${motivo}` +
+                                      `\nSaldo atual: R$ ${saldoAtual.toFixed(2)}` +
+                                      `\nSaldo após sangria: R$ ${novoSaldo.toFixed(2)}`;
+                
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+                
+                // Enviar dados para API
+                fetch('/api/retirada', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        valor: valor,
+                        motivo: motivo
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`Sangria registrada com sucesso! Saldo restante: R$ ${data.saldo_novo.toFixed(2)}`, 'success');
+                        
+                        // Limpar formulário
+                        document.getElementById('valor-retirada').value = '';
+                        document.getElementById('motivo-retirada').value = '';
+                        
+                        // Atualizar saldo e relatório
+                        atualizarSaldoCaixa();
+                        if (typeof gerarRelatorio === 'function') {
+                            setTimeout(gerarRelatorio, 500);
+                        }
+                    } else {
+                        showMessage('Erro ao registrar sangria: ' + (data.error || 'Erro desconhecido'), 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Erro ao registrar sangria: ' + error, 'error');
+                });
+            })
+            .catch(error => {
+                showMessage('Erro ao obter saldo atual: ' + error, 'error');
+            });
+        }
+        
+        function atualizarSaldoCaixa() {
+            // Buscar saldo atualizado
+            fetch('/api/saldo-caixa')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.saldo !== undefined) {
+                        // Atualizar elemento de saldo se existir
+                        const saldoElement = document.getElementById('saldo-atual');
+                        if (saldoElement) {
+                            saldoElement.textContent = `R$ ${data.saldo.toFixed(2)}`;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao atualizar saldo:', error);
+                });
         }
         
         let dadosRelatorio = [];
@@ -452,6 +627,9 @@
             if (cliente) params.push(`cliente=${encodeURIComponent(cliente)}`);
             if (produto) params.push(`produto=${produto}`);
             
+            // Adicionar timestamp para evitar cache
+            params.push(`_t=${Date.now()}`);
+            
             url += params.join('&');
             
             fetch(url)
@@ -484,28 +662,40 @@
                     <div class="summary-card">
                         <h3>Nenhum Registro</h3>
                         <div class="value">0</div>
-                        <div class="description">Nenhuma venda encontrada no período</div>
+                        <div class="description">Nenhuma transação encontrada no período</div>
                     </div>
                 `;
                 document.getElementById('results-tbody').innerHTML = '<tr><td colspan="5" class="no-data">Nenhum registro encontrado para o período selecionado</td></tr>';
                 document.getElementById('export-btn').style.display = 'none';
             } else {
-                // Calcular estatísticas
-                const totalVendas = dados.length;
+                // Calcular estatísticas - MODIFICADO para incluir sangrias
+                const totalVendas = dados.filter(item => item.valor > 0).length;
+                const totalSangrias = dados.filter(item => item.valor < 0).length;
+                const totalTransacoes = dados.length;
                 const totalValor = dados.reduce((sum, item) => sum + item.valor, 0);
-                const valorMedio = totalValor / totalVendas;
+                const valorMedio = totalVendas > 0 ? dados.filter(item => item.valor > 0).reduce((sum, item) => sum + item.valor, 0) / totalVendas : 0;
                 
                 // Exibir estatísticas
                 document.getElementById('summary-stats').innerHTML = `
                     <div class="summary-card">
-                        <h3>Total de Vendas</h3>
-                        <div class="value">${totalVendas}</div>
+                        <h3>Total de Transações</h3>
+                        <div class="value">${totalTransacoes}</div>
                         <div class="description">Transações no período</div>
                     </div>
                     <div class="summary-card">
-                        <h3>Faturamento Total</h3>
+                        <h3>Vendas</h3>
+                        <div class="value">${totalVendas}</div>
+                        <div class="description">Vendas realizadas</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Sangrias</h3>
+                        <div class="value">${totalSangrias}</div>
+                        <div class="description">Retiradas de caixa</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Saldo Líquido</h3>
                         <div class="value">R$ ${totalValor.toFixed(2)}</div>
-                        <div class="description">Valor total vendido</div>
+                        <div class="description">Vendas - Sangrias</div>
                     </div>
                     <div class="summary-card">
                         <h3>Ticket Médio</h3>
@@ -514,17 +704,26 @@
                     </div>
                 `;
                 
-                // Preencher tabela
+                // Preencher tabela - MODIFICADO para destacar sangrias
                 const tbody = document.getElementById('results-tbody');
                 tbody.innerHTML = '';
                 
                 dados.forEach(item => {
                     const row = document.createElement('tr');
+                    
+                    // Destacar sangrias com estilo diferente
+                    if (item.valor < 0) {
+                        row.style.backgroundColor = '#fff3cd';
+                        row.style.color = '#856404';
+                    }
+                    
                     row.innerHTML = `
                         <td>${item.data}</td>
                         <td>${item.cliente}</td>
                         <td>${item.produto}</td>
-                        <td>R$ ${item.valor.toFixed(2)}</td>
+                        <td style="color: ${item.valor < 0 ? '#dc3545' : '#28a745'}; font-weight: bold;">
+                            ${item.valor < 0 ? '-' : ''}R$ ${Math.abs(item.valor).toFixed(2)}
+                        </td>
                         <td>${item.observacoes || '-'}</td>
                     `;
                     tbody.appendChild(row);
@@ -542,16 +741,9 @@
             document.getElementById('cliente').value = '';
             document.getElementById('produto').value = '';
             document.getElementById('results-section').style.display = 'none';
-            document.getElementById('period-info').textContent = '';
         }
         
-        function exportarDados() {
-            if (dadosRelatorio.length === 0) {
-                showMessage('Nenhum dado para exportar', 'error');
-                return;
-            }
-            
-            // Criar CSV
+        function exportarCSV() {
             let csv = 'Data,Cliente,Produto,Valor,Observações\n';
             dadosRelatorio.forEach(item => {
                 csv += `"${item.data}","${item.cliente}","${item.produto}","${item.valor.toFixed(2)}","${item.observacoes || ''}"\n`;

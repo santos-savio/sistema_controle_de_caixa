@@ -18,6 +18,8 @@ def create_app(config_object: str = "config.Config") -> Flask:
 
     # register blueprints
     from .routes import main_bp
+    from .config_routes import config_bp
     app.register_blueprint(main_bp)
+    app.register_blueprint(config_bp)
 
     return app

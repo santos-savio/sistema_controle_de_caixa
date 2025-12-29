@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify
-from app.models import db, Client, Product, Transaction, TransactionItem
+from flask import Blueprint, render_template, request, jsonify, make_response
+from app.models import db, Client, Product, Transaction, TransactionItem, SystemConfig
 from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
@@ -43,31 +43,62 @@ def relatorios():
 
 @main_bp.route('/api/resumo')
 def api_resumo():
-    """API para dados do resumo"""
+    """API para dados do resumo - usando mesma lógica de cálculo do relatório"""
     try:
+        from sqlalchemy import func
+        
         # Estatísticas básicas
         total_transacoes = Transaction.query.count()
-        total_valor = db.session.query(db.func.sum(Transaction.total)).scalar() or 0
+        
+        # Saldo atual do caixa (mesma lógica da API de saldo)
+        saldo_atual = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        
+        # Total de vendas (apenas transações positivas)
+        total_vendas = db.session.query(func.sum(Transaction.total)).filter(Transaction.total > 0).scalar() or 0
+        
+        # Total de sangrias (apenas transações negativas)
+        total_sangrias = db.session.query(func.sum(Transaction.total)).filter(Transaction.total < 0).scalar() or 0
+        
         total_clientes = Client.query.count()
         total_produtos = Product.query.filter_by(active=True).count()
         
-        # Transações recentes
+        # Transações recentes (incluindo sangrias)
         transacoes_recentes = Transaction.query.order_by(
             Transaction.date.desc()
         ).limit(5).all()
         
         recentes = []
         for t in transacoes_recentes:
-            recentes.append({
-                'cliente': t.client.name if t.client else 'Não informado',
-                'produto': t.items[0].product.name if t.items and t.items[0].product else 'N/A',
-                'valor': float(t.total),
-                'data': t.date.strftime('%d/%m/%Y %H:%M')
-            })
+            # Verificar se é sangria
+            if t.notes and (t.notes.startswith('SANGRIA:') or t.notes.startswith('RETIRADA:')):
+                recentes.append({
+                    'cliente': 'SANGRIA',
+                    'produto': 'Retirada de Caixa',
+                    'valor': float(t.total),
+                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'tipo': 'sangria'
+                })
+            else:
+                produto_nome = 'N/A'
+                if t.items and len(t.items) > 0:
+                    if t.items[0].product:
+                        produto_nome = t.items[0].product.name
+                    elif t.items[0].description:
+                        produto_nome = t.items[0].description
+                
+                recentes.append({
+                    'cliente': t.client.name if t.client else 'Não informado',
+                    'produto': produto_nome,
+                    'valor': float(t.total),
+                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'tipo': 'venda'
+                })
         
         return jsonify({
             'total_transacoes': total_transacoes,
-            'total_valor': float(total_valor),
+            'saldo_atual': float(saldo_atual),
+            'total_vendas': float(total_vendas),
+            'total_sangrias': abs(float(total_sangrias)),  # Valor positivo para exibição
             'total_clientes': total_clientes,
             'total_produtos': total_produtos,
             'transacoes_recentes': recentes
@@ -88,7 +119,7 @@ def api_salvar_transaction():
         
         # Criar nova transação
         transaction = Transaction(
-            client_id=data.get('client_id'),
+            client_id=data.get('client_id') if data.get('client_id') else None,
             total=float(data['total']),
             notes=data.get('notes', ''),
             date=datetime.utcnow()
@@ -178,18 +209,84 @@ def api_remover_produto(produto_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@main_bp.route('/api/retirada', methods=['POST'])
+def api_retirada():
+    """API para registrar retirada de caixa"""
+    try:
+        data = request.get_json()
+        valor = data.get('valor')
+        motivo = data.get('motivo')
+        
+        if not valor or not motivo:
+            return jsonify({'error': 'Valor e motivo são obrigatórios'}), 400
+        
+        # Verificar saldo disponível
+        from sqlalchemy import func
+        saldo_atual = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        
+        if valor > saldo_atual:
+            return jsonify({
+                'error': f'Saldo insuficiente! Saldo disponível: R$ {float(saldo_atual):.2f}',
+                'saldo_disponivel': float(saldo_atual)
+            }), 400
+        
+        # Calcular novo saldo
+        novo_saldo = saldo_atual - valor
+        
+        # Criar transação de sangria (valor negativo)
+        sangria = Transaction(
+            total=-valor,  # Valor negativo para sangria
+            notes=f"SANGRIA: {motivo}",
+            date=datetime.now()
+        )
+        
+        db.session.add(sangria)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Sangria registrada com sucesso',
+            'sangria_id': sangria.id,
+            'saldo_anterior': float(saldo_atual),
+            'saldo_novo': float(novo_saldo),
+            'valor_retirado': valor
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/api/saldo-caixa')
+def api_saldo_caixa():
+    """API para obter saldo atual do caixa"""
+    try:
+        # Calcular saldo total (soma de todas as transações)
+        from sqlalchemy import func
+        
+        saldo = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        
+        return jsonify({
+            'saldo': float(saldo)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @main_bp.route('/api/relatorios')
 def api_relatorios():
     """API para gerar relatórios"""
     try:
+        # Forçar refresh dos dados para evitar cache
+        db.session.expire_all()
+        
         # Obter parâmetros de data
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         cliente = request.args.get('cliente')
         produto_id = request.args.get('produto')
         
-        # Construir query
-        query = Transaction.query.join(TransactionItem).join(Product)
+        # Construir query - MODIFICADO para incluir todas as transações
+        query = Transaction.query.outerjoin(TransactionItem).outerjoin(Product).outerjoin(Client)
         
         if data_inicio:
             data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
@@ -197,29 +294,68 @@ def api_relatorios():
         
         if data_fim:
             data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
-            query = query.filter(Transaction.date <= data_fim_dt)
+            # Adicionar 1 dia para incluir até o final do dia_fim
+            from datetime import timedelta
+            data_fim_dt = data_fim_dt + timedelta(days=1)
+            query = query.filter(Transaction.date < data_fim_dt)
         
         if cliente:
-            query = query.join(Client).filter(Client.name.contains(cliente))
+            query = query.filter(Client.name.contains(cliente))
         
         if produto_id:
             query = query.filter(Product.id == produto_id)
         
         transactions = query.order_by(Transaction.date.desc()).all()
         
-        # Formatar dados
+        # Formatar dados - MODIFICADO para lidar com sangrias e todas as transações
         dados = []
         for t in transactions:
-            dados.append({
-                'id': t.id,
-                'cliente': t.client.name if t.client else 'Não informado',
-                'produto': t.items[0].product.name if t.items and t.items[0].product else 'N/A',
-                'valor': float(t.total),
-                'data': t.date.strftime('%d/%m/%Y %H:%M'),
-                'observacoes': t.notes or ''
-            })
+            # Verificar se é uma sangria
+            if t.notes and t.notes.startswith('SANGRIA:'):
+                dados.append({
+                    'id': t.id,
+                    'cliente': 'SANGRIA',
+                    'produto': 'Retirada de Caixa',
+                    'valor': float(t.total),  # Valor negativo
+                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'observacoes': t.notes.replace('SANGRIA: ', ''),
+                    'tipo': 'sangria'
+                })
+            elif t.notes and t.notes.startswith('RETIRADA:'):
+                # Para compatibilidade com dados antigos
+                dados.append({
+                    'id': t.id,
+                    'cliente': 'SANGRIA',
+                    'produto': 'Retirada de Caixa',
+                    'valor': float(t.total),  # Valor negativo
+                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'observacoes': t.notes.replace('RETIRADA: ', ''),
+                    'tipo': 'sangria'
+                })
+            else:
+                # Transações normais de vendas
+                produto_nome = 'N/A'
+                if t.items and len(t.items) > 0:
+                    if t.items[0].product:
+                        produto_nome = t.items[0].product.name
+                    elif t.items[0].description:
+                        produto_nome = t.items[0].description
+                
+                dados.append({
+                    'id': t.id,
+                    'cliente': t.client.name if t.client else 'Não informado',
+                    'produto': produto_nome,
+                    'valor': float(t.total),
+                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'observacoes': t.notes or '',
+                    'tipo': 'venda'
+                })
         
-        return jsonify({'dados': dados})
+        response = make_response(jsonify({'dados': dados}))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
