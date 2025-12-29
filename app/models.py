@@ -100,3 +100,62 @@ class SystemConfig(db.Model):
             db.session.add(config)
         db.session.commit()
         return config
+
+
+class PaymentMethod(db.Model):
+    """Métodos de pagamento disponíveis"""
+    __tablename__ = "payment_methods"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    code = db.Column(db.String(20), nullable=False, unique=True)  # pix, dinheiro, credito, debito
+    description = db.Column(db.String(100), nullable=True)
+    active = db.Column(db.Boolean, default=True)
+    color = db.Column(db.String(7), default='#007bff')  # Cor para UI
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<PaymentMethod {self.name}>"
+
+    @classmethod
+    def get_active_methods(cls):
+        """Obter métodos de pagamento ativos"""
+        return cls.query.filter_by(active=True).all()
+
+    @classmethod
+    def get_by_code(cls, code):
+        """Obter método por código"""
+        return cls.query.filter_by(code=code, active=True).first()
+
+
+class Payment(db.Model):
+    """Pagamentos individuais de cada transação"""
+    __tablename__ = "payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relacionamentos
+    transaction = db.relationship('Transaction', backref=db.backref('payments', lazy=True, cascade='all, delete-orphan'))
+    payment_method = db.relationship('PaymentMethod', backref='payments')
+
+    def __repr__(self):
+        return f"<Payment {self.payment_method.name}: R${self.amount}>"
+
+    @classmethod
+    def get_balance_by_method(cls, method_id=None):
+        """Calcular saldo por método de pagamento"""
+        query = db.session.query(
+            PaymentMethod.name,
+            PaymentMethod.code,
+            PaymentMethod.color,
+            db.func.sum(Payment.amount).label('total')
+        ).join(Payment).filter(Payment.amount > 0)
+        
+        if method_id:
+            query = query.filter(Payment.payment_method_id == method_id)
+        
+        return query.group_by(PaymentMethod.id, PaymentMethod.name, PaymentMethod.code, PaymentMethod.color).all()

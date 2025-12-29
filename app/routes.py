@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, make_response
-from app.models import db, Client, Product, Transaction, TransactionItem, SystemConfig
+from app.models import db, Client, Product, Transaction, TransactionItem, SystemConfig, PaymentMethod, Payment
 from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
@@ -109,13 +109,23 @@ def api_resumo():
 
 @main_bp.route('/api/transaction', methods=['POST'])
 def api_salvar_transaction():
-    """API para salvar nova transação"""
+    """API para salvar nova transação com múltiplos pagamentos"""
     try:
         data = request.get_json()
         
         # Validação básica
         if not data.get('items') or not data.get('total'):
             return jsonify({'error': 'Campos obrigatórios faltando'}), 400
+        
+        # Validar pagamentos
+        payments = data.get('payments', [])
+        if not payments:
+            return jsonify({'error': 'É necessário informar pelo menos um pagamento'}), 400
+        
+        # Verificar se o total dos pagamentos corresponde ao total da transação
+        total_payments = sum(p['amount'] for p in payments)
+        if abs(total_payments - float(data['total'])) > 0.01:  # Tolerância de 1 centavo
+            return jsonify({'error': 'Total dos pagamentos não corresponde ao total da transação'}), 400
         
         # Criar nova transação
         transaction = Transaction(
@@ -140,9 +150,27 @@ def api_salvar_transaction():
             )
             db.session.add(item)
         
+        # Adicionar pagamentos
+        for payment_data in payments:
+            # Validar método de pagamento
+            payment_method = PaymentMethod.query.get(payment_data['payment_method_id'])
+            if not payment_method:
+                return jsonify({'error': f'Método de pagamento inválido: {payment_data["payment_method_id"]}'}), 400
+            
+            payment = Payment(
+                transaction_id=transaction.id,
+                payment_method_id=payment_data['payment_method_id'],
+                amount=float(payment_data['amount'])
+            )
+            db.session.add(payment)
+        
         db.session.commit()
         
-        return jsonify({'success': True, 'transaction_id': transaction.id})
+        return jsonify({
+            'success': True, 
+            'transaction_id': transaction.id,
+            'message': 'Transação registrada com sucesso'
+        })
         
     except Exception as e:
         db.session.rollback()
@@ -211,45 +239,70 @@ def api_remover_produto(produto_id):
 
 @main_bp.route('/api/retirada', methods=['POST'])
 def api_retirada():
-    """API para registrar retirada de caixa"""
+    """API para registrar retirada de caixa com tipo específico"""
     try:
         data = request.get_json()
         valor = data.get('valor')
         motivo = data.get('motivo')
+        payment_method_id = data.get('payment_method_id')
         
         if not valor or not motivo:
             return jsonify({'error': 'Valor e motivo são obrigatórios'}), 400
         
-        # Verificar saldo disponível
-        from sqlalchemy import func
-        saldo_atual = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        if not payment_method_id:
+            return jsonify({'error': 'Tipo de pagamento é obrigatório'}), 400
         
-        if valor > saldo_atual:
+        # Validar método de pagamento
+        payment_method = PaymentMethod.query.get(payment_method_id)
+        if not payment_method:
+            return jsonify({'error': 'Método de pagamento inválido'}), 400
+        
+        # Verificar saldo disponível para o método específico
+        from sqlalchemy import func
+        saldo_metodo = db.session.query(func.sum(Payment.amount)).filter(
+            Payment.payment_method_id == payment_method_id,
+            Payment.amount > 0
+        ).scalar() or 0
+        
+        if valor > saldo_metodo:
             return jsonify({
-                'error': f'Saldo insuficiente! Saldo disponível: R$ {float(saldo_atual):.2f}',
-                'saldo_disponivel': float(saldo_atual)
+                'error': f'Saldo insuficiente no método {payment_method.name}! Saldo disponível: R$ {float(saldo_metodo):.2f}',
+                'saldo_disponivel': float(saldo_metodo),
+                'metodo_nome': payment_method.name
             }), 400
         
         # Calcular novo saldo
-        novo_saldo = saldo_atual - valor
+        novo_saldo = saldo_metodo - valor
         
         # Criar transação de sangria (valor negativo)
         sangria = Transaction(
             total=-valor,  # Valor negativo para sangria
-            notes=f"SANGRIA: {motivo}",
+            notes=f"SANGRIA: {motivo} [{payment_method.name}]",
             date=datetime.now()
         )
         
         db.session.add(sangria)
+        db.session.flush()  # Obter ID da transação
+        
+        # Criar pagamento negativo para o método específico
+        payment_sangria = Payment(
+            transaction_id=sangria.id,
+            payment_method_id=payment_method_id,
+            amount=-valor  # Valor negativo para sangria
+        )
+        
+        db.session.add(payment_sangria)
         db.session.commit()
         
         return jsonify({
             'success': True, 
-            'message': 'Sangria registrada com sucesso',
+            'message': f'Sangria registrada com sucesso no caixa {payment_method.name}',
             'sangria_id': sangria.id,
-            'saldo_anterior': float(saldo_atual),
+            'saldo_anterior': float(saldo_metodo),
             'saldo_novo': float(novo_saldo),
-            'valor_retirado': valor
+            'valor_retirado': valor,
+            'metodo_nome': payment_method.name,
+            'metodo_cor': payment_method.color
         })
         
     except Exception as e:
