@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Controle de Caixa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .navigation {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .navigation a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        
+        .navigation a:hover {
+            text-decoration: underline;
+        }
+        
+        .config-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .config-section h3 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .field-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .field-item:last-child {
+            border-bottom: none;
+        }
+        
+        .field-info {
+            flex: 1;
+        }
+        
+        .field-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .field-description {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .field-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .field-controls > div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .field-controls input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .field-controls input:disabled + .slider {
+            background-color: #007bff;
+            cursor: not-allowed;
+        }
+        
+        .field-controls small {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .produto-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .produto-item:last-child {
+            border-bottom: none;
+        }
+        
+        .produto-info {
+            flex: 1;
+        }
+        
+        .produto-nome {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .produto-preco {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .pin-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .pin-input {
+            width: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        
+        .form-group input::placeholder {
+            color: #999;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Configurações</h1>
+        
+        <div class="navigation">
+            <a href="/">Registrar Venda</a>
+            <a href="/relatorios">Relatórios</a>
+            <a href="/configuracoes">Configurações</a>
+            <a href="/resumo">Resumo</a>
+        </div>
+        
+        <div id="messages"></div>
+        
+        <div class="config-section">
+            <h3>Campos do Formulário</h3>
+            <div id="fields-list">
+                <!-- Campos serão carregados dinamicamente -->
+            </div>
+        </div>
+        
+        <div class="config-section">
+            <h3>Produtos e Serviços</h3>
+            <div style="margin-bottom: 15px;">
+                <button class="btn" onclick="abrirModalProduto()">Adicionar Produto/Serviço</button>
+            </div>
+            <div id="produto-form" style="display: none;">
+                <div class="form-group">
+                    <label for="produto-nome">Nome:</label>
+                    <input type="text" id="produto-nome" placeholder="Digite o nome do produto/serviço">
+                </div>
+                <div class="form-group">
+                    <label for="produto-preco">Preço (R$):</label>
+                    <input type="number" id="produto-preco" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="cancelarProduto()">Cancelar</button>
+                    <button class="btn" onclick="salvarProdutoInline()">Salvar</button>
+                </div>
+            </div>
+            <div id="produtos-list">
+                <!-- Produtos serão carregados dinamicamente -->
+            </div>
+        </div>
+        
+        <div class="pin-section">
+            <h3>PIN de Acesso ao Resumo</h3>
+            <p>PIN atual: <span id="pin-status">Não definido</span></p>
+            <div style="margin-bottom: 15px;">
+                <button class="btn" onclick="abrirModalPin()">Alterar PIN</button>
+            </div>
+            <div id="pin-form" style="display: none;">
+                <div class="form-group">
+                    <label for="pin-atual">PIN Atual:</label>
+                    <input type="password" id="pin-atual" placeholder="Digite o PIN atual" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="pin-novo">Novo PIN:</label>
+                    <input type="password" id="pin-novo" placeholder="Digite o novo PIN" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="pin-confirmar">Confirmar Novo PIN:</label>
+                    <input type="password" id="pin-confirmar" placeholder="Confirme o novo PIN" maxlength="4">
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="cancelarPin()">Cancelar</button>
+                    <button class="btn" onclick="salvarPinInline()">Salvar</button>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <button class="btn btn-secondary" onclick="restaurarPadroes()">Restaurar Padrões</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuração padrão dos campos
+        const camposPadrao = [
+            { id: 'cliente_nome', nome: 'Nome do Cliente', descricao: 'Busca e seleção de clientes', visivel: true },
+            { id: 'produto_servico', nome: 'Produto/Serviço', descricao: 'Lista de produtos e serviços disponíveis', visivel: true },
+            { id: 'observacoes', nome: 'Observações', descricao: 'Notas adicionais sobre a venda', visivel: true }
+        ];
+
+        let camposConfig = [];
+
+        function carregarConfiguracoes() {
+            // Carregar do localStorage ou usar padrão
+            const salvos = localStorage.getItem('camposConfig');
+            camposConfig = salvos ? JSON.parse(salvos) : [...camposPadrao];
+            
+            renderizarCampos();
+            carregarProdutos();
+            
+            // Carregar PIN salvo
+            const pinSalvo = localStorage.getItem('pinResumo');
+            if (pinSalvo) {
+                document.getElementById('pin-status').textContent = '●●●●';
+            } else {
+                document.getElementById('pin-status').textContent = 'Não definido';
+            }
+        }
+
+        function renderizarCampos() {
+            const container = document.getElementById('fields-list');
+            container.innerHTML = '';
+            
+            camposConfig.forEach(campo => {
+                const fieldItem = document.createElement('div');
+                fieldItem.className = 'field-item';
+                
+                fieldItem.innerHTML = `
+                    <div class="field-info">
+                        <div class="field-name">${campo.nome}</div>
+                        <div class="field-description">${campo.descricao}</div>
+                    </div>
+                    <div class="field-controls">
+                        <div>
+                            <small>Visível</small>
+                            <label class="toggle-switch">
+                                <input type="checkbox" ${campo.visivel ? 'checked' : ''} 
+                                       onchange="toggleCampo('${campo.id}', 'visivel', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(fieldItem);
+            });
+        }
+
+        function toggleCampo(campoId, propriedade, valor) {
+            const campo = camposConfig.find(c => c.id === campoId);
+            if (campo) {
+                campo[propriedade] = valor;
+                // Salvar automaticamente
+                localStorage.setItem('camposConfig', JSON.stringify(camposConfig));
+                showMessage('Configuração salva automaticamente!', 'success');
+            }
+        }
+
+        function restaurarPadroes() {
+            if (confirm('Tem certeza que deseja restaurar as configurações padrão?')) {
+                camposConfig = [...camposPadrao];
+                renderizarCampos();
+                localStorage.removeItem('camposConfig');
+                localStorage.removeItem('pinResumo');
+                document.getElementById('pin-status').textContent = 'Não definido';
+                showMessage('Configurações restauradas com sucesso!', 'success');
+            }
+        }
+
+        function abrirModalPin() {
+            const form = document.getElementById('pin-form');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                // Limpar campos
+                document.getElementById('pin-atual').value = '';
+                document.getElementById('pin-novo').value = '';
+                document.getElementById('pin-confirmar').value = '';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        function cancelarPin() {
+            document.getElementById('pin-form').style.display = 'none';
+        }
+
+        function salvarPinInline() {
+            const pinAtual = document.getElementById('pin-atual').value;
+            const pinNovo = document.getElementById('pin-novo').value;
+            const pinConfirmar = document.getElementById('pin-confirmar').value;
+            const pinSalvo = localStorage.getItem('pinResumo');
+            
+            // Validações
+            if (pinSalvo && pinAtual !== pinSalvo) {
+                showMessage('PIN atual incorreto!', 'error');
+                return;
+            }
+            
+            if (pinNovo.length !== 4 || !/^\d{4}$/.test(pinNovo)) {
+                showMessage('Novo PIN deve ter exatamente 4 dígitos numéricos!', 'error');
+                return;
+            }
+            
+            if (pinNovo !== pinConfirmar) {
+                showMessage('Confirmação do PIN não confere!', 'error');
+                return;
+            }
+            
+            // Salvar novo PIN
+            localStorage.setItem('pinResumo', pinNovo);
+            document.getElementById('pin-status').textContent = '●●●●';
+            showMessage('PIN alterado com sucesso!', 'success');
+            document.getElementById('pin-form').style.display = 'none';
+        }
+
+        function abrirModalProduto() {
+            const form = document.getElementById('produto-form');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                // Limpar campos
+                document.getElementById('produto-nome').value = '';
+                document.getElementById('produto-preco').value = '';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        function cancelarProduto() {
+            document.getElementById('produto-form').style.display = 'none';
+        }
+
+        function salvarProdutoInline() {
+            const nome = document.getElementById('produto-nome').value.trim();
+            const preco = document.getElementById('produto-preco').value;
+            
+            if (!nome) {
+                showMessage('O nome do produto é obrigatório!', 'error');
+                return;
+            }
+            
+            if (!preco || parseFloat(preco) <= 0) {
+                showMessage('O preço deve ser maior que zero!', 'error');
+                return;
+            }
+            
+            fetch('/api/produtos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: nome,
+                    price: parseFloat(preco)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Produto adicionado com sucesso!', 'success');
+                    document.getElementById('produto-form').style.display = 'none';
+                    carregarProdutos();
+                } else {
+                    showMessage('Erro ao adicionar produto: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Erro ao adicionar produto: ' + error, 'error');
+            });
+        }
+
+        function carregarProdutos() {
+            fetch('/api/produtos')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('produtos-list');
+                    container.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        container.innerHTML = '<p style="color: #666; text-align: center;">Nenhum produto cadastrado.</p>';
+                        return;
+                    }
+                    
+                    data.forEach(produto => {
+                        const item = document.createElement('div');
+                        item.className = 'produto-item';
+                        item.innerHTML = `
+                            <div class="produto-info">
+                                <div class="produto-nome">${produto.name}</div>
+                                <div class="produto-preco">R$ ${produto.price.toFixed(2)}</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="removerProduto(${produto.id})">×</button>
+                        `;
+                        container.appendChild(item);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar produtos:', error);
+                });
+        }
+
+        function removerProduto(produtoId) {
+            if (confirm('Tem certeza que deseja remover este produto?')) {
+                fetch(`/api/produtos/${produtoId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message || 'Produto processado com sucesso!', 'success');
+                        carregarProdutos();
+                    } else {
+                        showMessage('Erro ao processar produto: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Erro ao processar produto: ' + error, 'error');
+                });
+            }
+        }
+
+        function salvarPinModal() {
+            const pinAtual = document.getElementById('pin-atual').value;
+            const pinNovo = document.getElementById('pin-novo').value;
+            const pinConfirmar = document.getElementById('pin-confirmar').value;
+            const pinSalvo = localStorage.getItem('pinResumo');
+            
+            // Validações
+            if (pinSalvo && pinAtual !== pinSalvo) {
+                showMessage('PIN atual incorreto!', 'error');
+                return;
+            }
+            
+            if (pinNovo.length !== 4 || !/^\d{4}$/.test(pinNovo)) {
+                showMessage('Novo PIN deve ter exatamente 4 dígitos numéricos!', 'error');
+                return;
+            }
+            
+            if (pinNovo !== pinConfirmar) {
+                showMessage('Confirmação do PIN não confere!', 'error');
+                return;
+            }
+            
+            // Salvar novo PIN
+            localStorage.setItem('pinResumo', pinNovo);
+            document.getElementById('pin-status').textContent = '●●●●';
+            showMessage('PIN alterado com sucesso!', 'success');
+            fecharModalPin();
+        }
+
+        function restaurarPadroes() {
+            if (confirm('Tem certeza que deseja restaurar as configurações padrão?')) {
+                camposConfig = [...camposPadrao];
+                renderizarCampos();
+                localStorage.removeItem('camposConfig');
+                localStorage.removeItem('pinResumo');
+                document.getElementById('pin-status').textContent = 'Não definido';
+                showMessage('Configurações restauradas com sucesso!', 'success');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Carregar configurações ao iniciar
+        document.addEventListener('DOMContentLoaded', carregarConfiguracoes);
+    </script>
+</body>
+</html>

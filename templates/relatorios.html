@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - Controle de Caixa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .navigation {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .navigation a {
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        
+        .navigation a:hover {
+            text-decoration: underline;
+        }
+        
+        .filters-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .form-group input, .form-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .results-section {
+            margin-top: 30px;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .results-header h3 {
+            color: #333;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .pin-container {
+            text-align: center;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .pin-input {
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 0 10px;
+            width: 150px;
+            text-align: center;
+        }
+        
+        .pin-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Relatórios</h1>
+        
+        <div class="navigation">
+            <a href="/">Registrar Venda</a>
+            <a href="/relatorios">Relatórios</a>
+            <a href="/configuracoes">Configurações</a>
+            <a href="/resumo">Resumo</a>
+        </div>
+        
+        <div id="pin-section" class="pin-container">
+            <h3>Digite o PIN para acessar os relatórios</h3>
+            <div id="pin-messages"></div>
+            <input type="password" id="pin-input" class="pin-input" placeholder="4 dígitos" maxlength="4">
+            <button class="btn btn-success" onclick="verificarPin()">Acessar</button>
+        </div>
+        
+        <div id="content" style="display: none;">
+            <div id="messages"></div>
+            
+            <div class="filters-section">
+                <h3>Filtros do Relatório</h3>
+                <div class="filters-grid">
+                    <div class="form-group">
+                        <label for="data_inicio">Data Início:</label>
+                        <input type="date" id="data_inicio" name="data_inicio">
+                    </div>
+                    <div class="form-group">
+                        <label for="data_fim">Data Fim:</label>
+                        <input type="date" id="data_fim" name="data_fim">
+                    </div>
+                    <div class="form-group">
+                        <label for="cliente">Cliente:</label>
+                        <input type="text" id="cliente" name="cliente" placeholder="Nome do cliente">
+                    </div>
+                    <div class="form-group">
+                        <label for="produto">Produto:</label>
+                        <select id="produto" name="produto">
+                            <option value="">Todos os produtos</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn" onclick="gerarRelatorio()">Gerar Relatório</button>
+                    <button class="btn btn-secondary" onclick="limparFiltros()">Limpar Filtros</button>
+                    <button class="btn btn-success" onclick="exportarDados()" id="export-btn" style="display: none;">Exportar CSV</button>
+                </div>
+            </div>
+        
+        <div class="results-section" id="results-section" style="display: none;">
+            <div class="results-header">
+                <h3>Resultados</h3>
+                <span id="total-registros"></span>
+            </div>
+            
+            <div class="summary-stats" id="summary-stats">
+                <!-- Estatísticas serão carregadas dinamicamente -->
+            </div>
+            
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Produto</th>
+                            <th>Valor</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                        <!-- Dados serão carregados dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            Gerando relatório...
+        </div>
+    </div>
+
+    <script>
+        function showMessagePin(message, type) {
+            const messagesDiv = document.getElementById('pin-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        function verificarPin() {
+            const pin = document.getElementById('pin-input').value;
+            const pinSalvo = localStorage.getItem('pinResumo');
+            
+            if (!pinSalvo) {
+                showMessagePin('Nenhum PIN foi configurado ainda. Configure um PIN na página de configurações.', 'error');
+                return;
+            }
+            
+            if (pin === pinSalvo && pin.length === 4) {
+                showMessagePin('PIN correto! Acessando relatórios...', 'success');
+                setTimeout(() => {
+                    document.getElementById('pin-section').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                }, 1000);
+            } else {
+                showMessagePin('PIN incorreto! Tente novamente.', 'error');
+                document.getElementById('pin-input').value = '';
+            }
+        }
+        
+        let dadosRelatorio = [];
+        
+        function carregarProdutos() {
+            // Carregar produtos para o filtro
+            fetch('/api/produtos')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('produto');
+                    data.forEach(produto => {
+                        const option = document.createElement('option');
+                        option.value = produto.id;
+                        option.textContent = produto.name;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar produtos:', error);
+                });
+        }
+        
+        function gerarRelatorio() {
+            const dataInicio = document.getElementById('data_inicio').value;
+            const dataFim = document.getElementById('data_fim').value;
+            const cliente = document.getElementById('cliente').value;
+            const produto = document.getElementById('produto').value;
+            
+            // Mostrar loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results-section').style.display = 'none';
+            
+            // Construir URL com parâmetros
+            let url = '/api/relatorios?';
+            const params = [];
+            
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (cliente) params.push(`cliente=${encodeURIComponent(cliente)}`);
+            if (produto) params.push(`produto=${produto}`);
+            
+            url += params.join('&');
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (data.error) {
+                        showMessage('Erro ao gerar relatório: ' + data.error, 'error');
+                        return;
+                    }
+                    
+                    dadosRelatorio = data.dados;
+                    exibirResultados(data.dados);
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    showMessage('Erro ao gerar relatório: ' + error, 'error');
+                });
+        }
+        
+        function exibirResultados(dados) {
+            if (dados.length === 0) {
+                document.getElementById('results-tbody').innerHTML = '<tr><td colspan="5" class="no-data">Nenhum registro encontrado</td></tr>';
+                document.getElementById('total-registros').textContent = '0 registros';
+                document.getElementById('summary-stats').innerHTML = '';
+                document.getElementById('export-btn').style.display = 'none';
+            } else {
+                // Calcular estatísticas
+                const totalVendas = dados.length;
+                const totalValor = dados.reduce((sum, item) => sum + item.valor, 0);
+                const valorMedio = totalValor / totalVendas;
+                
+                // Exibir estatísticas
+                document.getElementById('summary-stats').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Vendas</div>
+                        <div class="stat-value">${totalVendas}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Faturamento Total</div>
+                        <div class="stat-value">R$ ${totalValor.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Valor Médio</div>
+                        <div class="stat-value">R$ ${valorMedio.toFixed(2)}</div>
+                    </div>
+                `;
+                
+                // Preencher tabela
+                const tbody = document.getElementById('results-tbody');
+                tbody.innerHTML = '';
+                
+                dados.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.data}</td>
+                        <td>${item.cliente}</td>
+                        <td>${item.produto}</td>
+                        <td>R$ ${item.valor.toFixed(2)}</td>
+                        <td>${item.observacoes || '-'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('total-registros').textContent = `${totalVendas} registros`;
+                document.getElementById('export-btn').style.display = 'inline-block';
+            }
+            
+            document.getElementById('results-section').style.display = 'block';
+        }
+        
+        function limparFiltros() {
+            document.getElementById('data_inicio').value = '';
+            document.getElementById('data_fim').value = '';
+            document.getElementById('cliente').value = '';
+            document.getElementById('produto').value = '';
+            document.getElementById('results-section').style.display = 'none';
+        }
+        
+        function exportarDados() {
+            if (dadosRelatorio.length === 0) {
+                showMessage('Nenhum dado para exportar', 'error');
+                return;
+            }
+            
+            // Criar CSV
+            let csv = 'Data,Cliente,Produto,Valor,Observações\n';
+            dadosRelatorio.forEach(item => {
+                csv += `"${item.data}","${item.cliente}","${item.produto}","${item.valor.toFixed(2)}","${item.observacoes || ''}"\n`;
+            });
+            
+            // Criar blob e download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `relatorio_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('Relatório exportado com sucesso!', 'success');
+        }
+        
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'error-message';
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        // Carregar produtos ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarProdutos();
+            
+            // Definir datas padrão (últimos 30 dias)
+            const hoje = new Date();
+            const ha30dias = new Date();
+            ha30dias.setDate(hoje.getDate() - 30);
+            
+            document.getElementById('data_fim').value = hoje.toISOString().split('T')[0];
+            document.getElementById('data_inicio').value = ha30dias.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

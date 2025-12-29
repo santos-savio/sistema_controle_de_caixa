@@ -160,17 +160,15 @@
         <div id="messages"></div>
         
         <form id="transacao-form">
-            <div class="form-group">
-                <label for="cliente_nome">Cliente:
-                    <button type="button" class="btn-remove" onclick="toggleClienteField()">Remover</button>
-                </label>
+            <div class="form-group" id="campo_cliente_nome">
+                <label for="cliente_nome">Cliente:</label>
                 <div class="cliente-search">
                     <input type="text" id="cliente_nome" name="cliente_nome" placeholder="Digite o nome do cliente">
                     <div id="cliente-results" class="cliente-results" style="display: none;"></div>
                 </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" id="campo_produto_servico">
                 <label for="produto_servico_id">Produto/Serviço:</label>
                 <select id="produto_servico_id" name="produto_servico_id" required>
                     <option value="">Selecione um produto/serviço</option>
@@ -180,12 +178,12 @@
                 </select>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" id="campo_valor">
                 <label for="valor">Valor (R$):</label>
                 <input type="number" id="valor" name="valor" step="0.01" min="0" required>
             </div>
             
-            <div class="form-group">
+            <div class="form-group" id="campo_observacoes">
                 <label for="observacoes">Observações:</label>
                 <textarea id="observacoes" name="observacoes" rows="3" placeholder="Observações opcionais"></textarea>
             </div>
@@ -198,6 +196,30 @@
     <script>
         let clienteSelecionado = null;
         let clienteFieldVisible = true;
+
+        // Carregar configurações dos campos
+        function carregarConfiguracoesCampos() {
+            const salvos = localStorage.getItem('camposConfig');
+            const camposConfig = salvos ? JSON.parse(salvos) : [
+                { id: 'cliente_nome', nome: 'Nome do Cliente', descricao: 'Busca e seleção de clientes', visivel: true },
+                { id: 'produto_servico', nome: 'Produto/Serviço', descricao: 'Lista de produtos e serviços disponíveis', visivel: true },
+                { id: 'observacoes', nome: 'Observações', descricao: 'Notas adicionais sobre a venda', visivel: true }
+            ];
+            
+            // Aplicar visibilidade dos campos
+            camposConfig.forEach(campo => {
+                const campoElement = document.getElementById(`campo_${campo.id}`);
+                if (campoElement) {
+                    campoElement.style.display = campo.visivel ? 'block' : 'none';
+                }
+            });
+            
+            // Campo valor sempre visível (obrigatório)
+            const campoValor = document.getElementById('campo_valor');
+            if (campoValor) {
+                campoValor.style.display = 'block';
+            }
+        }
 
         // Buscar clientes
         document.getElementById('cliente_nome').addEventListener('input', function(e) {
@@ -234,16 +256,6 @@
             document.getElementById('cliente-results').style.display = 'none';
         }
 
-        function toggleClienteField() {
-            const clienteGroup = document.querySelector('label[for="cliente_nome"]').parentElement;
-            clienteFieldVisible = !clienteFieldVisible;
-            clienteGroup.style.display = clienteFieldVisible ? 'block' : 'none';
-            
-            if (!clienteFieldVisible) {
-                clienteSelecionado = null;
-                document.getElementById('cliente_nome').value = '';
-            }
-        }
 
         // Auto-preencher valor quando selecionar produto
         document.getElementById('produto_servico_id').addEventListener('change', function(e) {
@@ -257,6 +269,16 @@
         // Enviar formulário
         document.getElementById('transacao-form').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validar se o campo valor está visível e preenchido
+            const campoValor = document.getElementById('campo_valor');
+            const valorInput = document.getElementById('valor');
+            
+            if (campoValor.style.display !== 'none' && (!valorInput.value || parseFloat(valorInput.value) <= 0)) {
+                showMessage('O valor deve ser maior que zero!', 'error');
+                valorInput.focus();
+                return;
+            }
             
             const formData = {
                 client_id: clienteSelecionado ? clienteSelecionado.id : null,
@@ -283,7 +305,7 @@
                     showMessage('Venda registrada com sucesso!', 'success');
                     limparFormulario();
                 } else {
-                    showMessage('Erro: ' + data.error, 'error');
+                    showMessage('Erro ao registrar venda: ' + data.error, 'error');
                 }
             })
             .catch(error => {
@@ -314,6 +336,10 @@
             if (!e.target.closest('.cliente-search')) {
                 document.getElementById('cliente-results').style.display = 'none';
             }
+        });
+        // Carregar configurações ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarConfiguracoesCampos();
         });
     </script>
 </body>
