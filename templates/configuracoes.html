@@ -198,15 +198,125 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .produto-item:last-child {
-            border-bottom: none;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
         
         .produto-info {
             flex: 1;
+        }
+        
+        .produto-nome {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .produto-preco {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .produto-preco-edit {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .produto-preco-edit input {
+            width: 100px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        
+        .produto-acoes {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .config-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-container.large {
+            width: 800px;
+            max-width: 800px;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+        
+        .modal-close:hover {
+            background: #f0f0f0;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
         }
         
         .produto-nome {
@@ -307,7 +417,7 @@
         <div class="config-section">
             <h3>Produtos e Serviços</h3>
             <div style="margin-bottom: 15px;">
-                <button class="btn" onclick="abrirModalProduto()">Adicionar Produto/Serviço</button>
+                <button class="btn" onclick="abrirModalGerenciarProdutos()">Editar Produtos/Serviços</button>
             </div>
             <div id="produto-form" style="display: none;">
                 <div class="form-group">
@@ -360,7 +470,86 @@
         </div>
     </div>
 
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title"></h3>
+                <button class="modal-close" onclick="fecharModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Conteúdo dinâmico -->
+            </div>
+            <div class="modal-footer">
+                <!-- Botões dinâmicos -->
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Sistema de Modais
+        function abrirModal(titulo, conteudo, botoes = [], tamanho = 'medium') {
+            const overlay = document.querySelector('.modal-overlay');
+            const container = document.querySelector('.modal-container');
+            const titleElement = container.querySelector('.modal-title');
+            const bodyElement = container.querySelector('.modal-body');
+            const footerElement = container.querySelector('.modal-footer');
+            
+            // Definir título (mostrar apenas se houver)
+            if (titulo) {
+                titleElement.textContent = titulo;
+                titleElement.style.display = 'block';
+            } else {
+                titleElement.style.display = 'none';
+            }
+            
+            // Definir conteúdo
+            if (conteudo) {
+                bodyElement.innerHTML = conteudo;
+            }
+            
+            // Definir botões
+            footerElement.innerHTML = '';
+            botoes.forEach(botao => {
+                const button = document.createElement('button');
+                button.textContent = botao.text;
+                button.className = botao.class || 'btn';
+                if (botao.onclick) {
+                    button.onclick = botao.onclick;
+                }
+                footerElement.appendChild(button);
+            });
+            
+            // Definir tamanho
+            container.className = 'modal-container';
+            if (tamanho === 'large') {
+                container.classList.add('large');
+            }
+            
+            // Mostrar modal
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Bloquear scroll do fundo
+        }
+        
+        function fecharModal() {
+            const overlay = document.querySelector('.modal-overlay');
+            overlay.style.display = 'none';
+            document.body.style.overflow = ''; // Restaurar scroll
+        }
+        
+        function mostrarInformacao(titulo, mensagem) {
+            abrirModal(titulo, `<p>${mensagem}</p>`, [
+                { text: 'Ok', class: 'btn', onclick: () => fecharModal() }
+            ]);
+        }
+        
+        function confirmarAcao(titulo, mensagem, onConfirm) {
+            abrirModal(titulo, `<p>${mensagem}</p>`, [
+                { text: 'Cancelar', class: 'btn-secondary', onclick: () => fecharModal() },
+                { text: 'Confirmar', class: 'btn', onclick: () => { onConfirm(); fecharModal(); } }
+            ]);
+        }
+
         // Configuração padrão dos campos
         const camposPadrao = [
             { id: 'cliente_nome', nome: 'Nome do Cliente', descricao: 'Busca e seleção de clientes', visivel: true },
@@ -554,33 +743,113 @@
             });
         }
 
-        function abrirModalProduto() {
-            const form = document.getElementById('produto-form');
-            if (form.style.display === 'none') {
+        function abrirModalGerenciarProdutos() {
+            carregarProdutosParaModal();
+            abrirModal('Gerenciar Produtos e Serviços', '', [
+                { text: 'Ok', class: 'btn', onclick: () => fecharModal() }
+            ], 'large');
+        }
+        
+        function carregarProdutosParaModal() {
+            fetch('/api/produtos')
+                .then(response => response.json())
+                .then(data => {
+                    renderizarModalProdutos(data);
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar produtos:', error);
+                    mostrarInformacao('Erro', 'Não foi possível carregar os produtos');
+                });
+        }
+        
+        function renderizarModalProdutos(produtos) {
+            const modalBody = document.querySelector('.modal-body');
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" onclick="abrirFormNovoProduto()">+ Adicionar Novo Produto</button>
+                </div>
+                <div id="form-novo-produto" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                    <h4>Novo Produto</h4>
+                    <div class="form-group">
+                        <label>Nome:</label>
+                        <input type="text" id="novo-produto-nome" placeholder="Nome do produto/serviço" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Preço (R$):</label>
+                        <input type="number" id="novo-produto-preco" step="0.01" min="0" placeholder="0.00" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" onclick="cancelarNovoProduto()">Cancelar</button>
+                        <button class="btn" onclick="salvarNovoProduto()">Salvar</button>
+                    </div>
+                </div>
+                <div class="produtos-list">
+            `;
+            
+            produtos.forEach(produto => {
+                html += `
+                    <div class="produto-item-modal" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
+                        <div class="produto-info" style="flex: 1;">
+                            <div class="produto-nome" style="font-weight: bold; margin-bottom: 5px;">${produto.name}</div>
+                            <div class="produto-preco-edit" id="preco-modal-${produto.id}">
+                                <span class="produto-preco">R$ ${parseFloat(produto.price).toFixed(2)}</span>
+                                <input type="number" class="produto-preco-input" step="0.01" min="0" value="${produto.price}" 
+                                       style="display: none; width: 120px; padding: 5px; margin-left: 10px;"
+                                       onblur="salvarPrecoModal(${produto.id}, this.value)"
+                                       onkeypress="if(event.key==='Enter') salvarPrecoModal(${produto.id}, this.value)">
+                            </div>
+                        </div>
+                        <div class="produto-acoes" style="display: flex; gap: 5px;">
+                            <button class="btn btn-sm" onclick="editarPrecoModal(${produto.id}, ${produto.price})">Editar Preço</button>
+                            <button class="btn btn-danger btn-sm" onclick="deletarProduto(${produto.id}, '${produto.name}')">Deletar</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            modalBody.innerHTML = html;
+        }
+        
+        function abrirFormNovoProduto() {
+            const form = document.getElementById('form-novo-produto');
+            if (form) {
                 form.style.display = 'block';
-                // Limpar campos
-                document.getElementById('produto-nome').value = '';
-                document.getElementById('produto-preco').value = '';
-            } else {
-                form.style.display = 'none';
+                const nomeInput = document.getElementById('novo-produto-nome');
+                if (nomeInput) nomeInput.focus();
             }
         }
-
-        function cancelarProduto() {
-            document.getElementById('produto-form').style.display = 'none';
+        
+        function cancelarNovoProduto() {
+            const form = document.getElementById('form-novo-produto');
+            if (form) {
+                form.style.display = 'none';
+            }
+            const nomeInput = document.getElementById('novo-produto-nome');
+            const precoInput = document.getElementById('novo-produto-preco');
+            if (nomeInput) nomeInput.value = '';
+            if (precoInput) precoInput.value = '';
         }
-
-        function salvarProdutoInline() {
-            const nome = document.getElementById('produto-nome').value.trim();
-            const preco = document.getElementById('produto-preco').value;
+        
+        function salvarNovoProduto() {
+            const nomeInput = document.getElementById('novo-produto-nome');
+            const precoInput = document.getElementById('novo-produto-preco');
+            
+            if (!nomeInput || !precoInput) {
+                mostrarInformacao('Erro', 'Formulário não encontrado');
+                return;
+            }
+            
+            const nome = nomeInput.value.trim();
+            const preco = precoInput.value;
             
             if (!nome) {
-                showMessage('O nome do produto é obrigatório!', 'error');
+                mostrarInformacao('Erro', 'O nome do produto é obrigatório');
                 return;
             }
             
             if (!preco || parseFloat(preco) <= 0) {
-                showMessage('O preço deve ser maior que zero!', 'error');
+                mostrarInformacao('Erro', 'O preço deve ser maior que zero');
                 return;
             }
             
@@ -597,16 +866,98 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage('Produto adicionado com sucesso!', 'success');
-                    document.getElementById('produto-form').style.display = 'none';
+                    mostrarInformacao('Sucesso', 'Produto adicionado com sucesso');
+                    cancelarNovoProduto();
+                    carregarProdutosParaModal();
                     carregarProdutos();
                 } else {
-                    showMessage('Erro ao adicionar produto: ' + data.error, 'error');
+                    mostrarInformacao('Erro', 'Erro ao adicionar produto: ' + data.error);
                 }
             })
             .catch(error => {
-                showMessage('Erro ao adicionar produto: ' + error, 'error');
+                mostrarInformacao('Erro', 'Erro ao adicionar produto: ' + error);
             });
+        }
+        
+        function editarPrecoModal(produtoId, precoAtual) {
+            const precoElement = document.getElementById(`preco-modal-${produtoId}`);
+            if (!precoElement) {
+                mostrarInformacao('Erro', 'Elemento de preço não encontrado');
+                return;
+            }
+            
+            const precoSpan = precoElement.querySelector('.produto-preco');
+            const precoInput = precoElement.querySelector('.produto-preco-input');
+            
+            if (!precoSpan || !precoInput) {
+                mostrarInformacao('Erro', 'Campos de preço não encontrados');
+                return;
+            }
+            
+            if (precoInput.style.display === 'none' || !precoInput.style.display) {
+                // Modo edição
+                precoInput.value = precoAtual;
+                precoInput.style.display = 'inline-block';
+                precoSpan.style.display = 'none';
+                precoInput.focus();
+                precoInput.select();
+            } else {
+                // Modo visualização
+                salvarPrecoModal(produtoId, precoInput.value);
+            }
+        }
+        
+        function salvarPrecoModal(produtoId, novoPreco) {
+            const preco = parseFloat(novoPreco);
+            
+            if (isNaN(preco) || preco < 0) {
+                mostrarInformacao('Erro', 'Preço inválido');
+                return;
+            }
+            
+            fetch(`/api/produtos/${produtoId}/preco`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    preco: preco
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarInformacao('Sucesso', 'Preço atualizado com sucesso');
+                    carregarProdutosParaModal();
+                    carregarProdutos();
+                } else {
+                    mostrarInformacao('Erro', 'Erro ao atualizar preço: ' + data.error);
+                }
+            })
+            .catch(error => {
+                mostrarInformacao('Erro', 'Erro ao atualizar preço: ' + error);
+            });
+        }
+        
+        function deletarProduto(produtoId, produtoNome) {
+            if (confirm(`Tem certeza que deseja deletar o produto "${produtoNome}"?`)) {
+                fetch(`/api/produtos/${produtoId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarInformacao('Sucesso', data.message || 'Produto removido com sucesso');
+                        carregarProdutosParaModal();
+                        carregarProdutos();
+                    } else {
+                        mostrarInformacao('Erro', 'Erro ao remover produto: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    mostrarInformacao('Erro', 'Erro ao remover produto: ' + error);
+                });
+            }
         }
 
         function carregarProdutos() {
@@ -629,7 +980,7 @@
                                 <div class="produto-nome">${produto.name}</div>
                                 <div class="produto-preco">R$ ${produto.price.toFixed(2)}</div>
                             </div>
-                            <button class="btn btn-danger btn-sm" onclick="removerProduto(${produto.id})">×</button>
+                            <button class="btn btn-danger btn-sm" onclick="deletarProduto(${produto.id})">×</button>
                         `;
                         container.appendChild(item);
                     });
@@ -637,26 +988,6 @@
                 .catch(error => {
                     console.error('Erro ao carregar produtos:', error);
                 });
-        }
-
-        function removerProduto(produtoId) {
-            if (confirm('Tem certeza que deseja remover este produto?')) {
-                fetch(`/api/produtos/${produtoId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showMessage(data.message || 'Produto processado com sucesso!', 'success');
-                        carregarProdutos();
-                    } else {
-                        showMessage('Erro ao processar produto: ' + data.error, 'error');
-                    }
-                })
-                .catch(error => {
-                    showMessage('Erro ao processar produto: ' + error, 'error');
-                });
-            }
         }
 
         function salvarPinModal() {
@@ -711,8 +1042,33 @@
             }, 5000);
         }
 
+        // Fechar modal ao clicar no overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.querySelector('.modal-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) {
+                        fecharModal();
+                    }
+                });
+            }
+            
+            // Fechar modal com ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const overlay = document.querySelector('.modal-overlay');
+                    if (overlay && overlay.style.display === 'flex') {
+                        fecharModal();
+                    }
+                }
+            });
+        });
+
         // Carregar configurações ao iniciar
-        document.addEventListener('DOMContentLoaded', carregarConfiguracoes);
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarConfiguracoes();
+            carregarProdutos();
+        });
     </script>
 </body>
 </html>

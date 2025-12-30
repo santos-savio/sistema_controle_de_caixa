@@ -305,6 +305,190 @@
         .btn-danger:hover {
             background: #c82333;
         }
+        
+        .balances-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .balances-section h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .balances-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .balance-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .balance-card .method-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+        }
+        
+        .balance-card .balance-amount {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .balance-card .balance-details {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .balance-card.positive .balance-amount {
+            color: #28a745;
+        }
+        
+        .balance-card.positive .payment-summary span {
+            color: #28a745;
+        }
+        
+        .balance-card.negative .balance-amount {
+            color: #dc3545;
+        }
+        
+        .balance-card.zero .balance-amount {
+            color: #6c757d;
+        }
+        
+        /* Estilos para Modais */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            animation: slideIn 0.3s ease;
+            position: relative;
+            margin: 20px;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-small { max-width: 400px; }
+        .modal-medium { max-width: 600px; }
+        .modal-large { max-width: 800px; }
+        .modal-full { max-width: 95%; }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .modal-container {
+                max-width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -340,9 +524,16 @@
                     </div>
                     <button class="btn btn-danger" onclick="registrarRetirada()">Registrar Retirada</button>
                     <div class="form-group" style="margin-left: auto; min-width: 150px;">
-                        <label>Saldo Atual:</label>
+                        <label>Saldo em Caixa:</label>
                         <strong id="saldo-atual" style="color: #28a745; font-size: 18px;">Carregando...</strong>
                     </div>
+                </div>
+            </div>
+            
+            <div class="balances-section">
+                <h3>Saldos por Tipo de Pagamento</h3>
+                <div class="balances-grid" id="balances-grid">
+                    <!-- Saldos serão carregados dinamicamente -->
                 </div>
             </div>
             
@@ -363,16 +554,22 @@
                     </div>
                     <div class="form-group">
                         <label for="produto">Produto:</label>
-                        <select id="produto" name="produto">
-                            <option value="">Todos os produtos</option>
-                        </select>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button type="button" class="btn btn-secondary" onclick="abrirModalProdutos()">
+                                Selecionar Produtos
+                                <span id="produtos-selecionados-count">(0)</span>
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="limparSelecaoProdutos()" style="background: #6c757d;">Limpar</button>
+                        </div>
+                        <div id="produtos-selecionados-texto" style="margin-top: 5px; font-size: 12px; color: #6c757d;">
+                            Nenhum produto selecionado
+                        </div>
                     </div>
                 </div>
                 
                 <div class="actions-bar">
                     <div class="actions-left">
                         <button class="btn btn-success" onclick="gerarRelatorio()">Gerar Relatório</button>
-                        <button class="btn btn-primary" onclick="carregarTodasTransacoes()">Carregar Todas as Transações</button>
                         <button class="btn btn-secondary" onclick="limparFiltros()">Limpar Filtros</button>
                         <button class="btn" onclick="exportarCSV()" id="export-btn" style="display: none;">Exportar CSV</button>
                     </div>
@@ -469,9 +666,13 @@
                         // Carregar saldo ao acessar
                         atualizarSaldoCaixa();
                         
-                        // Carregar produtos e gerar relatório inicial
-                        carregarProdutos();
-                        gerarRelatorio();
+                        // Carregar saldos por tipo de pagamento
+                        carregarSaldosPorTipo();
+                        
+                        // Carregar produtos (única vez) e gerar relatório inicial
+                        carregarProdutos().then(() => {
+                            gerarRelatorio();
+                        });
                     }, 1000);
                 } else {
                     showMessagePin(data.error || 'PIN incorreto! Tente novamente.', 'error');
@@ -497,79 +698,56 @@
                 return;
             }
             
-            // Obter saldo atual primeiro
-            fetch('/api/saldo-caixa')
+            // Enviar dados para API usando sempre o método dinheiro (ID 1)
+            fetch('/api/retirada', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valor: valor,
+                    motivo: motivo,
+                    payment_method_id: 1  // ID fixo para método dinheiro
+                })
+            })
             .then(response => response.json())
-            .then(saldoData => {
-                const saldoAtual = saldoData.saldo || 0;
-                
-                // Validar saldo disponível
-                if (valor > saldoAtual) {
-                    showMessage(`Saldo insuficiente! Saldo disponível: R$ ${saldoAtual.toFixed(2)}`, 'error');
-                    return;
-                }
-                
-                // Calcular novo saldo
-                const novoSaldo = saldoAtual - valor;
-                
-                // Confirmar retirada com informações detalhadas
-                const confirmMessage = `Confirmar sangria de R$ ${valor.toFixed(2)}?` +
-                                      `\n\nMotivo: ${motivo}` +
-                                      `\nSaldo atual: R$ ${saldoAtual.toFixed(2)}` +
-                                      `\nSaldo após sangria: R$ ${novoSaldo.toFixed(2)}`;
-                
-                if (!confirm(confirmMessage)) {
-                    return;
-                }
-                
-                // Enviar dados para API
-                fetch('/api/retirada', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        valor: valor,
-                        motivo: motivo
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showMessage(`Sangria registrada com sucesso! Saldo restante: R$ ${data.saldo_novo.toFixed(2)}`, 'success');
-                        
-                        // Limpar formulário
-                        document.getElementById('valor-retirada').value = '';
-                        document.getElementById('motivo-retirada').value = '';
-                        
-                        // Atualizar saldo e relatório
-                        atualizarSaldoCaixa();
-                        if (typeof gerarRelatorio === 'function') {
-                            setTimeout(gerarRelatorio, 500);
-                        }
-                    } else {
-                        showMessage('Erro ao registrar sangria: ' + (data.error || 'Erro desconhecido'), 'error');
+            .then(data => {
+                if (data.success) {
+                    showMessage(`Sangria registrada com sucesso! Saldo restante em caixa: R$ ${data.saldo_novo.toFixed(2)}`, 'success');
+                    
+                    // Limpar formulário
+                    document.getElementById('valor-retirada').value = '';
+                    document.getElementById('motivo-retirada').value = '';
+                    
+                    // Atualizar saldo e relatório
+                    atualizarSaldoCaixa();
+                    carregarSaldosPorTipo();
+                    if (typeof gerarRelatorio === 'function') {
+                        setTimeout(gerarRelatorio, 500);
                     }
-                })
-                .catch(error => {
-                    showMessage('Erro ao registrar sangria: ' + error, 'error');
-                });
+                } else {
+                    showMessage('Erro ao registrar sangria: ' + (data.error || 'Erro desconhecido'), 'error');
+                }
             })
             .catch(error => {
-                showMessage('Erro ao obter saldo atual: ' + error, 'error');
+                showMessage('Erro ao registrar sangria: ' + error, 'error');
             });
         }
         
         function atualizarSaldoCaixa() {
-            // Buscar saldo atualizado
-            fetch('/api/saldo-caixa')
+            // Buscar saldo apenas do dinheiro em caixa
+            fetch('/api/balances')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.saldo !== undefined) {
+                    if (data.balances) {
+                        // Encontrar o saldo do método dinheiro
+                        const dinheiroBalance = data.balances.find(b => b.code === 'dinheiro');
+                        const saldoDinheiro = dinheiroBalance ? dinheiroBalance.balance : 0;
+                        
                         // Atualizar elemento de saldo se existir
                         const saldoElement = document.getElementById('saldo-atual');
                         if (saldoElement) {
-                            saldoElement.textContent = `R$ ${data.saldo.toFixed(2)}`;
+                            saldoElement.textContent = `R$ ${saldoDinheiro.toFixed(2)}`;
                         }
                     }
                 })
@@ -578,22 +756,74 @@
                 });
         }
         
-        let dadosRelatorio = [];
-        
-        function carregarProdutos() {
-            fetch('/api/produtos')
+        function carregarSaldosPorTipo() {
+            fetch('/api/balances')
                 .then(response => response.json())
                 .then(data => {
-                    const select = document.getElementById('produto');
-                    data.forEach(produto => {
-                        const option = document.createElement('option');
-                        option.value = produto.id;
-                        option.textContent = produto.name;
-                        select.appendChild(option);
+                    const balancesGrid = document.getElementById('balances-grid');
+                    balancesGrid.innerHTML = '';
+                    
+                    if (!data.balances || data.balances.length === 0) {
+                        balancesGrid.innerHTML = '<p>Nenhum saldo encontrado</p>';
+                        return;
+                    }
+                    
+                    data.balances.forEach(balance => {
+                        const card = document.createElement('div');
+                        card.className = 'balance-card';
+                        
+                        // Determinar classe CSS baseada no saldo
+                        if (balance.balance > 0) {
+                            card.classList.add('positive');
+                        } else if (balance.balance < 0) {
+                            card.classList.add('negative');
+                        } else {
+                            card.classList.add('zero');
+                        }
+                        
+                        card.innerHTML = `
+                            <div class="method-name" style="background-color: ${balance.color}">
+                                ${balance.name}
+                            </div>
+                            <div class="balance-amount">
+                                R$ ${balance.balance.toFixed(2)}
+                            </div>
+                            <div class="balance-details">
+                                Vendas: R$ ${balance.total_sales.toFixed(2)}
+                                ${balance.code === 'dinheiro' ? `<br>Sangrias: R$ ${balance.total_sangrias.toFixed(2)}` : ''}
+                            </div>
+                        `;
+                        
+                        balancesGrid.appendChild(card);
                     });
                 })
                 .catch(error => {
+                    console.error('Erro ao carregar saldos:', error);
+                    document.getElementById('balances-grid').innerHTML = '<p>Erro ao carregar saldos</p>';
+                });
+        }
+        
+        let dadosRelatorio = [];
+        
+        function carregarProdutos() {
+            return fetch('/api/produtos-unicos')
+                .then(response => response.json())
+                .then(data => {
+                    todosProdutos = data;
+                    
+                    // Por padrão, selecionar todos os produtos
+                    produtosSelecionados.clear();
+                    data.forEach(produto => {
+                        const produtoId = produto.id || `custom_${produto.name}`;
+                        produtosSelecionados.add(produtoId);
+                    });
+                    
+                    atualizarInterfaceSelecaoProdutos();
+                    return data; // Retornar dados para o then() encadeado
+                })
+                .catch(error => {
                     console.error('Erro ao carregar produtos:', error);
+                    throw error; // Propagar erro para o catch() encadeado
                 });
         }
         
@@ -601,16 +831,18 @@
             const dataInicio = document.getElementById('data_inicio').value;
             const dataFim = document.getElementById('data_fim').value;
             const cliente = document.getElementById('cliente').value;
-            const produto = document.getElementById('produto').value;
+            
+            // Obter produtos selecionados do Set global
+            const produtosSelecionadosArray = Array.from(produtosSelecionados);
             
             // Validar datas
             if (!dataInicio || !dataFim) {
-                showMessage('Selecione o período de datas', 'error');
+                mostrarInformacao('Validação', 'Selecione o período de datas');
                 return;
             }
             
             if (new Date(dataInicio) > new Date(dataFim)) {
-                showMessage('Data de início não pode ser maior que a data fim', 'error');
+                mostrarInformacao('Validação', 'Data de início não pode ser maior que a data fim');
                 return;
             }
             
@@ -618,21 +850,25 @@
             document.getElementById('loading').style.display = 'block';
             document.getElementById('results-section').style.display = 'none';
             
-            // Construir URL com parâmetros
-            let url = '/api/relatorios?';
-            const params = [];
+            // Preparar dados para POST (evita URL muito longa)
+            const requestData = {
+                data_inicio: dataInicio,
+                data_fim: dataFim,
+                produtos: produtosSelecionadosArray
+            };
             
-            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
-            if (dataFim) params.push(`data_fim=${dataFim}`);
-            if (cliente) params.push(`cliente=${encodeURIComponent(cliente)}`);
-            if (produto) params.push(`produto=${produto}`);
+            if (cliente) {
+                requestData.cliente = cliente;
+            }
             
-            // Adicionar timestamp para evitar cache
-            params.push(`_t=${Date.now()}`);
-            
-            url += params.join('&');
-            
-            fetch(url)
+            // Enviar via POST para evitar problemas com URL longa
+            fetch('/api/relatorios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('loading').style.display = 'none';
@@ -739,7 +975,10 @@
             document.getElementById('data_inicio').value = '';
             document.getElementById('data_fim').value = '';
             document.getElementById('cliente').value = '';
-            document.getElementById('produto').value = '';
+            
+            // Limpar seleção de produtos
+            limparSelecaoProdutos();
+            
             document.getElementById('results-section').style.display = 'none';
         }
         
@@ -765,7 +1004,7 @@
         
         // Carregar produtos ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
-            carregarProdutos();
+            // Não carregar produtos aqui - será carregado após validação do PIN
             
             // Definir datas padrão (últimos 30 dias)
             const hoje = new Date();
@@ -774,7 +1013,341 @@
             
             document.getElementById('data_fim').value = hoje.toISOString().split('T')[0];
             document.getElementById('data_inicio').value = ha30dias.toISOString().split('T')[0];
+            
+            // Foco automático no campo PIN
+            document.getElementById('pin-input').focus();
+        });
+        
+        // Sistema de Modais
+        function abrirModal(titulo, conteudo, botoes = [], tamanho = 'medium') {
+            const overlay = document.querySelector('.modal-overlay');
+            const container = document.querySelector('.modal-container');
+            const titleElement = container.querySelector('.modal-title');
+            const bodyElement = container.querySelector('.modal-body');
+            const footerElement = container.querySelector('.modal-footer');
+            
+            // Definir título (mostrar apenas se houver)
+            if (titulo) {
+                titleElement.textContent = titulo;
+                titleElement.style.display = 'block';
+            } else {
+                titleElement.style.display = 'none';
+            }
+            
+            // Definir conteúdo
+            if (typeof conteudo === 'string') {
+                bodyElement.innerHTML = conteudo;
+            } else {
+                bodyElement.innerHTML = '';
+                bodyElement.appendChild(conteudo);
+            }
+            
+            // Definir tamanho
+            container.className = `modal-container modal-${tamanho}`;
+            
+            // Adicionar botões
+            footerElement.innerHTML = '';
+            footerElement.style.display = 'flex';
+            if (botoes.length > 0) {
+                botoes.forEach(botao => {
+                    const button = document.createElement('button');
+                    button.textContent = botao.texto;
+                    button.className = botao.classe || 'btn';
+                    button.onclick = botao.onclick;
+                    if (botao.tipo) button.type = botao.tipo;
+                    footerElement.appendChild(button);
+                });
+            } else {
+                footerElement.style.display = 'none';
+            }
+            
+            // Mostrar modal
+            overlay.style.display = 'flex';
+            document.body.classList.add('modal-open');
+            
+            // Foco no primeiro elemento focável
+            setTimeout(() => {
+                const primeiroFocavel = container.querySelector('input, button, select, textarea');
+                if (primeiroFocavel) primeiroFocavel.focus();
+            }, 100);
+        }
+        
+        function fecharModal() {
+            const overlay = document.querySelector('.modal-overlay');
+            overlay.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+        
+        function confirmarAcao(mensagem, callback, titulo = 'Confirmar Ação') {
+            const botoes = [
+                {
+                    texto: 'Cancelar',
+                    classe: 'btn btn-secondary',
+                    onclick: () => fecharModal()
+                },
+                {
+                    texto: 'Confirmar',
+                    classe: 'btn btn-danger',
+                    onclick: () => {
+                        callback();
+                        fecharModal();
+                    }
+                }
+            ];
+            
+            abrirModal(titulo, `<p>${mensagem}</p>`, botoes, 'small');
+        }
+        
+        function mostrarInformacao(titulo, mensagem, callback = null) {
+            const botoes = callback ? [
+                {
+                    texto: 'OK',
+                    classe: 'btn btn-primary',
+                    onclick: () => {
+                        callback();
+                        fecharModal();
+                    }
+                }
+            ] : [
+                {
+                    texto: 'OK',
+                    classe: 'btn btn-primary',
+                    onclick: () => fecharModal()
+                }
+            ];
+            
+            abrirModal(titulo, `<p>${mensagem}</p>`, botoes, 'small');
+        }
+        
+        // Sistema de Seleção de Produtos
+        let produtosSelecionados = new Set();
+        let todosProdutos = [];
+        
+        // Inicializar ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar variáveis
+            produtosSelecionados = new Set();
+            todosProdutos = [];
+        });
+        
+        function abrirModalProdutos() {
+            if (todosProdutos.length === 0) {
+                carregarProdutosParaModal();
+            } else {
+                renderizarModalProdutos();
+            }
+        }
+        
+        function carregarProdutosParaModal() {
+            fetch('/api/produtos-unicos')
+                .then(response => response.json())
+                .then(data => {
+                    todosProdutos = data;
+                    renderizarModalProdutos();
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar produtos:', error);
+                    mostrarInformacao('Erro', 'Não foi possível carregar a lista de produtos');
+                });
+        }
+        
+        function renderizarModalProdutos() {
+            // Gerar IDs únicos para evitar conflitos
+            const timestamp = Date.now();
+            const selectAllId = `select-all-produtos-${timestamp}`;
+            
+            let conteudo = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 10px; font-weight: bold;">
+                            <input type="checkbox" id="${selectAllId}" onchange="toggleTodosProdutos('${selectAllId}', this.checked)" checked>
+                            Selecionar todos
+                        </label>
+                    </div>
+                    <div style="border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
+            `;
+            
+            todosProdutos.forEach((produto, index) => {
+                // Por padrão, todos os produtos são selecionados
+                const produtoId = produto.id || `custom_${produto.name}`;
+                if (!produtosSelecionados.has(produtoId)) {
+                    produtosSelecionados.add(produtoId);
+                }
+                
+                const checkboxId = `produto-${timestamp}-${index}`;
+                const isChecked = produtosSelecionados.has(produtoId);
+                const nomeCompleto = produto.name + (produto.price ? ` - R$ ${produto.price.toFixed(2)}` : '') + 
+                                  (produto.type === 'personalizado' ? ' (Personalizado)' : '');
+                
+                conteudo += `
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #f8f9fa;">
+                        <input type="checkbox" 
+                               id="${checkboxId}" 
+                               value="${produtoId}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="toggleProdutoSelecionado('${produtoId}', this.checked)">
+                        <label for="${checkboxId}" style="margin: 0; cursor: pointer; flex: 1;">
+                            ${nomeCompleto}
+                        </label>
+                    </div>
+                `;
+            });
+            
+            conteudo += `
+                    </div>
+                </div>
+            `;
+            
+            const botoes = [
+                {
+                    texto: 'Cancelar',
+                    classe: 'btn btn-secondary',
+                    onclick: () => fecharModal()
+                },
+                {
+                    texto: 'Aplicar Seleção',
+                    classe: 'btn btn-primary',
+                    onclick: () => aplicarSelecaoProdutos()
+                }
+            ];
+            
+            abrirModal('Selecionar Produtos', conteudo, botoes, 'large');
+            
+            // Atualizar estado do "selecionar todos"
+            setTimeout(() => {
+                const selectAllCheckbox = document.getElementById(selectAllId);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = produtosSelecionados.size === todosProdutos.length;
+                    selectAllCheckbox.indeterminate = produtosSelecionados.size > 0 && produtosSelecionados.size < todosProdutos.length;
+                }
+            }, 100);
+        }
+        
+        function toggleTodosProdutos(selectAllId, checked) {
+            const modalBody = document.querySelector('.modal-body');
+            if (!modalBody) return;
+
+            // Pegar todos os checkboxes de itens (exclui somente o checkbox de "selecionar todos")
+            const checkboxes = modalBody.querySelectorAll(`input[type="checkbox"]:not(#${selectAllId})`);
+
+            if (!checked) {
+                // Desselecionar tudo
+                produtosSelecionados.clear();
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            } else {
+                // Selecionar tudo
+                produtosSelecionados.clear();
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const value = checkbox.value;
+                    // Cada checkbox representa exatamente 1 produto
+                    produtosSelecionados.add(value);
+                });
+            }
+            
+            // Atualizar checkbox "selecionar todos"
+            const selectAllCheckbox = document.getElementById(selectAllId);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = checked;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            // Atualizar interface (contador/texto) fora do modal imediatamente
+            atualizarInterfaceSelecaoProdutos();
+        }
+        
+        function toggleProdutoSelecionado(produtoId, checked) {
+            if (checked) {
+                produtosSelecionados.add(produtoId);
+            } else {
+                produtosSelecionados.delete(produtoId);
+            }
+            
+            // Atualizar checkbox "selecionar todos" se existir
+            const selectAllCheckbox = document.querySelector('#modal-body input[id*="select-all"]');
+            if (selectAllCheckbox) {
+                const totalProdutos = todosProdutos.length;
+                selectAllCheckbox.checked = produtosSelecionados.size === totalProdutos;
+                selectAllCheckbox.indeterminate = produtosSelecionados.size > 0 && produtosSelecionados.size < totalProdutos;
+            }
+
+            // Atualizar interface (contador/texto) fora do modal imediatamente
+            atualizarInterfaceSelecaoProdutos();
+        }
+        
+        function aplicarSelecaoProdutos() {
+            atualizarInterfaceSelecaoProdutos();
+            fecharModal();
+        }
+        
+        function limparSelecaoProdutos() {
+            produtosSelecionados.clear();
+            atualizarInterfaceSelecaoProdutos();
+        }
+        
+        function atualizarInterfaceSelecaoProdutos() {
+            const countElement = document.querySelector('#produtos-selecionados-count');
+            const textoElement = document.querySelector('#produtos-selecionados-texto');
+            
+            if (!countElement || !textoElement) return;
+            
+            countElement.textContent = `(${produtosSelecionados.size})`;
+            
+            if (produtosSelecionados.size === 0) {
+                textoElement.textContent = 'Nenhum produto selecionado';
+            } else {
+                const nomes = Array.from(produtosSelecionados).map(id => {
+                    const produto = todosProdutos.find(p => (p.id || `custom_${p.name}`) === id);
+                    return produto ? produto.name : id;
+                });
+                
+                if (nomes.length <= 3) {
+                    textoElement.textContent = `Selecionados: ${nomes.join(', ')}`;
+                } else {
+                    textoElement.textContent = `Selecionados: ${nomes.slice(0, 3).join(', ')} e mais ${nomes.length - 3}`;
+                }
+            }
+        }
+        
+        // Fechar modal ao clicar no overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.querySelector('.modal-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        fecharModal();
+                    }
+                });
+            }
+        });
+        
+        // Fechar modal com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const overlay = document.querySelector('.modal-overlay');
+                if (overlay && overlay.style.display === 'flex') {
+                    fecharModal();
+                }
+            }
         });
     </script>
+    
+    <!-- Modal Container -->
+    <div class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" style="display: none;">Título</h3>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Conteúdo será inserido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <!-- Botões serão inseridos dinamicamente -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -148,6 +148,10 @@
             font-size: 18px;
         }
         
+        .transaction-value.sangria {
+            color: #dc3545;
+        }
+        
         .transaction-date {
             color: #999;
             font-size: 12px;
@@ -214,13 +218,17 @@
                     <div class="value" id="total-clientes">-</div>
                 </div>
                 <div class="summary-card">
-                    <h3>Produtos Ativos</h3>
-                    <div class="value" id="total-produtos">-</div>
+                    <h3>Total de Sangrias</h3>
+                    <div class="value" id="total-sangrias">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Saldo Atual</h3>
+                    <div class="value" id="saldo-atual">-</div>
                 </div>
             </div>
             
             <div class="recent-transactions">
-                <h3>Vendas Recentes</h3>
+                <h3>Transações Recentes</h3>
                 <div id="transacoes-recentes">
                     <div class="loading">Carregando...</div>
                 </div>
@@ -262,9 +270,10 @@
                     
                     // Atualizar cards
                     document.getElementById('total-transacoes').textContent = data.total_transacoes;
-                    document.getElementById('total-valor').textContent = 'R$ ' + data.total_valor.toFixed(2);
+                    document.getElementById('total-valor').textContent = 'R$ ' + data.total_vendas.toFixed(2);
                     document.getElementById('total-clientes').textContent = data.total_clientes;
-                    document.getElementById('total-produtos').textContent = data.total_produtos;
+                    document.getElementById('total-sangrias').textContent = 'R$ ' + data.total_sangrias.toFixed(2);
+                    document.getElementById('saldo-atual').textContent = 'R$ ' + data.saldo_atual.toFixed(2);
                     
                     // Atualizar transações recentes
                     const transacoesDiv = document.getElementById('transacoes-recentes');
@@ -273,19 +282,24 @@
                     data.transacoes_recentes.forEach(transacao => {
                         const item = document.createElement('div');
                         item.className = 'transaction-item';
+                        
+                        // Verificar se é sangria para aplicar estilo diferente
+                        const valorClass = transacao.tipo === 'sangria' ? 'sangria' : '';
+                        const valorPrefix = transacao.tipo === 'sangria' ? '- ' : '';
+                        
                         item.innerHTML = `
                             <div class="transaction-info">
                                 <div class="transaction-client">${transacao.cliente}</div>
                                 <div class="transaction-product">${transacao.produto}</div>
                                 <div class="transaction-date">${transacao.data}</div>
                             </div>
-                            <div class="transaction-value">R$ ${transacao.valor.toFixed(2)}</div>
+                            <div class="transaction-value ${valorClass}">${valorPrefix}R$ ${Math.abs(transacao.valor).toFixed(2)}</div>
                         `;
                         transacoesDiv.appendChild(item);
                     });
                     
                     if (data.transacoes_recentes.length === 0) {
-                        transacoesDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Nenhuma venda registrada ainda.</div>';
+                        transacoesDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Nenhuma transação registrada ainda.</div>';
                     }
                 })
                 .catch(error => {

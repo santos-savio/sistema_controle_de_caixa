@@ -101,6 +101,211 @@
             background: #545b62;
         }
         
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .btn-add-payment {
+            background: #28a745;
+            margin-left: 10px;
+        }
+        
+        .btn-add-payment:hover {
+            background: #218838;
+        }
+        
+        .btn-remove-payment {
+            background: #dc3545;
+            margin-left: 5px;
+        }
+        
+        .btn-remove-payment:hover {
+            background: #c82333;
+        }
+        
+        .pagamento-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .pagamento-item select {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .pagamento-item .payment-amount {
+            width: 160px;
+        }
+        
+        .valor-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .valor-item label {
+            min-width: 120px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .valor-item input {
+            flex: 1;
+        }
+        
+        .payment-amount[readonly] {
+            background-color: #f8f9fa;
+            color: #28a745;
+            font-weight: bold;
+            cursor: not-allowed;
+        }
+        
+        .payment-amount[readonly].valor-negativo {
+            color: #dc3545;
+            background-color: #f8d7da;
+        }
+        
+        .payment-summary {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 16px;
+        }
+        
+        .payment-summary span {
+            color: #28a745;
+        }
+        
+        /* Estilos para Modais */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            animation: slideIn 0.3s ease;
+            position: relative;
+            margin: 20px;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-small { max-width: 400px; }
+        .modal-medium { max-width: 600px; }
+        .modal-large { max-width: 800px; }
+        .modal-full { max-width: 95%; }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .modal-container {
+                max-width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 15px;
+            }
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
         .btn-remove {
             background: #dc3545;
             color: white;
@@ -169,12 +374,24 @@
             
             <div class="form-group" id="campo_produto_servico">
                 <label for="produto_servico_id">Produto/Serviço:</label>
-                <select id="produto_servico_id" name="produto_servico_id" required>
+                <select id="produto_servico_id" name="produto_servico_id" required onchange="handleProdutoChange()">
                     <option value="">Selecione um produto/serviço</option>
+                    <option value="outro">Outro</option>
                     {% for produto in produtos %}
                     <option value="{{ produto.id }}" data-preco="{{ produto.price }}">{{ produto.name }} - R$ {{ "%.2f"|format(produto.price) }}</option>
                     {% endfor %}
                 </select>
+            </div>
+            
+            <div class="form-group" id="campo_outro_produto" style="display: none;">
+                <label for="outro_produto_nome">Nome do Produto/Serviço:</label>
+                <div style="display: flex; gap: 10px; align-items: end;">
+                    <input type="text" id="outro_produto_nome" placeholder="Digite o nome do produto/serviço" style="flex: 1;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="checkbox" id="salvar_produto" style="width: auto;">
+                        <label for="salvar_produto" style="margin: 0; white-space: nowrap;">Salvar na lista</label>
+                    </div>
+                </div>
             </div>
             
             <div class="form-group" id="campo_valor">
@@ -185,6 +402,24 @@
             <div class="form-group" id="campo_observacoes">
                 <label for="observacoes">Observações:</label>
                 <textarea id="observacoes" name="observacoes" rows="3" placeholder="Observações opcionais"></textarea>
+            </div>
+            
+            <div class="form-group" id="campo_pagamentos">
+                <label>Forma de Pagamento:</label>
+                <div id="pagamentos-container">
+                    <div class="pagamento-item">
+                        <select class="payment-method" required onchange="handlePaymentMethodChange(this)">
+                            <option value="">Selecione o método</option>
+                        </select>
+                        <button type="button" class="btn btn-small btn-add-payment" onclick="adicionarPagamento()">+</button>
+                    </div>
+                </div>
+                <div id="pagamentos-valor-container" style="display: none; margin-top: 15px;">
+                    <!-- Campos de valor aparecerão aqui -->
+                </div>
+                <div class="payment-summary">
+                    <strong>Total: R$ <span id="payment-total">0.00</span></strong>
+                </div>
             </div>
             
             <button type="submit" class="btn">Salvar</button>
@@ -217,6 +452,234 @@
             const campoValor = document.getElementById('campo_valor');
             if (campoValor) {
                 campoValor.style.display = 'block';
+            }
+            
+            // Campo pagamentos sempre visível (obrigatório)
+            const campoPagamentos = document.getElementById('campo_pagamentos');
+            if (campoPagamentos) {
+                campoPagamentos.style.display = 'block';
+            }
+        }
+
+        // Carregar métodos de pagamento
+        async function carregarMetodosPagamento() {
+            try {
+                const response = await fetch('/api/payment-methods');
+                const methods = await response.json();
+                
+                // Atualizar todos os selects de pagamento
+                document.querySelectorAll('.payment-method').forEach(select => {
+                    select.innerHTML = '<option value="">Selecione o método</option>';
+                    methods.forEach(method => {
+                        const option = document.createElement('option');
+                        option.value = method.id;
+                        option.textContent = method.name;
+                        option.style.color = method.color;
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error('Erro ao carregar métodos de pagamento:', error);
+            }
+        }
+
+        // Lidar com mudança no campo de produto/serviço
+        function handleProdutoChange() {
+            const select = document.getElementById('produto_servico_id');
+            const outroCampo = document.getElementById('campo_outro_produto');
+            const outroInput = document.getElementById('outro_produto_nome');
+            
+            if (select.value === 'outro') {
+                outroCampo.style.display = 'block';
+                outroInput.required = true;
+                outroInput.focus();
+            } else {
+                outroCampo.style.display = 'none';
+                outroInput.required = false;
+                outroInput.value = '';
+                
+                // Atualizar valor se for um produto existente
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.dataset.preco) {
+                    document.getElementById('valor').value = selectedOption.dataset.preco;
+                }
+            }
+        }
+
+        // Lidar com mudança no método de pagamento
+        function handlePaymentMethodChange(select) {
+            atualizarCamposValor();
+        }
+
+        // Adicionar novo pagamento
+        function adicionarPagamento() {
+            const container = document.getElementById('pagamentos-container');
+            const pagamentoItem = document.createElement('div');
+            pagamentoItem.className = 'pagamento-item';
+            
+            // Clonar o primeiro select para manter as opções
+            const firstSelect = document.querySelector('.payment-method');
+            pagamentoItem.innerHTML = `
+                <select class="payment-method" required onchange="handlePaymentMethodChange(this)">
+                    ${firstSelect.innerHTML}
+                </select>
+                <button type="button" class="btn btn-small btn-remove-payment" onclick="removerPagamento(this)">-</button>
+            `;
+            
+            container.appendChild(pagamentoItem);
+            
+            // Atualizar campos de valor
+            atualizarCamposValor();
+        }
+
+        // Remover pagamento
+        function removerPagamento(button) {
+            const pagamentoItem = button.parentElement;
+            pagamentoItem.remove();
+            atualizarCamposValor();
+        }
+
+        // Atualizar campos de valor baseado nos métodos selecionados
+        function atualizarCamposValor() {
+            const rows = document.querySelectorAll('#pagamentos-container .pagamento-item');
+            const valorContainer = document.getElementById('pagamentos-valor-container');
+            const metodosSelecionados = [];
+
+            // Limpar/ocultar o container antigo (não usamos mais, mas mantemos para compatibilidade)
+            if (valorContainer) {
+                valorContainer.innerHTML = '';
+                valorContainer.style.display = 'none';
+            }
+
+            // Remover inputs existentes e coletar métodos selecionados na ordem das linhas
+            rows.forEach(row => {
+                const existingInput = row.querySelector('.payment-amount');
+                if (existingInput) {
+                    existingInput.remove();
+                }
+
+                const select = row.querySelector('.payment-method');
+                if (select && select.value) {
+                    metodosSelecionados.push({
+                        row,
+                        id: select.value,
+                        name: select.options[select.selectedIndex].text
+                    });
+                }
+            });
+
+            if (metodosSelecionados.length === 0) {
+                atualizarTotalPagamentos();
+                return;
+            }
+
+            // Criar inputs ao lado de cada select selecionado
+            // Regra: quando houver 2+ métodos, o primeiro fica calculado automaticamente (readonly)
+            // e os demais ficam editáveis.
+            metodosSelecionados.forEach((metodo, index) => {
+                const input = document.createElement('input');
+
+                input.type = 'number';
+                input.className = 'payment-amount';
+                input.dataset.methodId = metodo.id;
+                input.dataset.methodIndex = String(index);
+                input.step = '0.01';
+                input.min = '0';
+
+                // Regra: 1 método = sempre total (readonly). 2+ métodos = primeiro calculado (readonly)
+                const shouldBeReadonly = (metodosSelecionados.length === 1) || (metodosSelecionados.length > 1 && index === 0);
+                if (shouldBeReadonly) {
+                    input.readOnly = true;
+                    input.placeholder = metodosSelecionados.length === 1 ? 'Total' : 'Calculado automaticamente';
+                } else {
+                    input.required = true;
+                    input.placeholder = 'Valor (R$)';
+                    input.addEventListener('input', calcularValoresAutomaticos);
+                    input.addEventListener('change', calcularValoresAutomaticos);
+                }
+
+                // Inserir antes do botão (+/-)
+                const actionButton = metodo.row.querySelector('button');
+                if (actionButton) {
+                    metodo.row.insertBefore(input, actionButton);
+                } else {
+                    metodo.row.appendChild(input);
+                }
+            });
+
+            // Preencher automaticamente se houver apenas um método
+            if (metodosSelecionados.length === 1) {
+                const valorTotal = parseFloat(document.getElementById('valor').value) || 0;
+                const onlyInput = document.querySelector('.payment-amount');
+                if (onlyInput) {
+                    onlyInput.value = valorTotal.toFixed(2);
+                }
+            }
+
+            calcularValoresAutomaticos();
+            atualizarTotalPagamentos();
+        }
+
+        // Calcular valores automáticos
+        function calcularValoresAutomaticos() {
+            const valorInputs = document.querySelectorAll('.payment-amount');
+            const valorTotal = parseFloat(document.getElementById('valor').value) || 0;
+
+            if (valorInputs.length === 0) return;
+
+            // Se há apenas um método, sempre usar o valor total
+            if (valorInputs.length === 1) {
+                valorInputs[0].value = valorTotal.toFixed(2);
+                atualizarTotalPagamentos();
+                return;
+            }
+
+            // Se há múltiplos métodos, calcular o PRIMEIRO como diferença do total
+            let somaOutros = 0;
+            valorInputs.forEach((input, index) => {
+                if (index > 0) {
+                    somaOutros += parseFloat(input.value) || 0;
+                }
+            });
+
+            const primeiroInput = valorInputs[0];
+            const valorPrimeiro = valorTotal - somaOutros;
+
+            if (valorPrimeiro >= 0) {
+                primeiroInput.value = valorPrimeiro.toFixed(2);
+                primeiroInput.style.color = '#28a745';
+                primeiroInput.classList.remove('valor-negativo');
+            } else {
+                primeiroInput.value = valorPrimeiro.toFixed(2);
+                primeiroInput.style.color = '#dc3545';
+                primeiroInput.classList.add('valor-negativo');
+            }
+
+            atualizarTotalPagamentos();
+        }
+
+        // Atualizar total dos pagamentos
+        function atualizarTotalPagamentos() {
+            const amounts = document.querySelectorAll('.payment-amount');
+            let total = 0;
+            
+            amounts.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            document.getElementById('payment-total').textContent = total.toFixed(2);
+            
+            // Verificar se o total corresponde ao valor da venda
+            const valorVenda = parseFloat(document.getElementById('valor').value) || 0;
+            const totalPagamentos = total;
+            
+            if (valorVenda > 0 && totalPagamentos > 0) {
+                if (Math.abs(totalPagamentos - valorVenda) > 0.01) {
+                    document.getElementById('payment-total').style.color = '#dc3545';
+                } else {
+                    document.getElementById('payment-total').style.color = '#28a745';
+                }
             }
         }
 
@@ -266,7 +729,36 @@
         });
 
         // Enviar formulário
-        document.getElementById('transacao-form').addEventListener('submit', function(e) {
+        // Função para salvar novo produto
+        async function salvarNovoProduto(nome, preco) {
+            try {
+                const response = await fetch('/api/produtos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: nome,
+                        price: preco
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(`Produto "${nome}" salvo com sucesso!`, 'success');
+                    // Retornar o ID do produto salvo
+                    return data.produto.id;
+                } else {
+                    showMessage('Erro ao salvar produto: ' + (data.error || 'Erro desconhecido'), 'error');
+                    return null;
+                }
+            } catch (error) {
+                showMessage('Erro ao salvar produto: ' + error, 'error');
+                return null;
+            }
+        }
+
+        document.getElementById('transacao-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Validar se o campo valor está visível e preenchido
@@ -279,16 +771,97 @@
                 return;
             }
             
+            // Validar produto/serviço
+            const produtoSelect = document.getElementById('produto_servico_id');
+            const produtoId = produtoSelect.value;
+            const outroNome = document.getElementById('outro_produto_nome').value;
+            
+            if (!produtoId) {
+                showMessage('Selecione um produto/serviço!', 'error');
+                return;
+            }
+            
+            if (produtoId === 'outro' && !outroNome) {
+                showMessage('Digite o nome do produto/serviço!', 'error');
+                return;
+            }
+            
+            // Validar pagamentos
+            const pagamentos = [];
+            const valorInputs = document.querySelectorAll('.payment-amount');
+            
+            if (valorInputs.length === 0) {
+                showMessage('Selecione pelo menos uma forma de pagamento!', 'error');
+                return;
+            }
+            
+            for (let input of valorInputs) {
+                const value = parseFloat(input.value);
+
+                // Campo calculado automaticamente (readOnly)
+                if (input.readOnly) {
+                    if (isNaN(value)) {
+                        mostrarInformacao('Erro de Valores', 'Não foi possível calcular o valor automaticamente.');
+                        return;
+                    }
+                    if (value < 0) {
+                        mostrarInformacao('Erro de Valores', 'O valor total excede o somatório dos pagamentos informados!');
+                        return;
+                    }
+                } else {
+                    // Campos editáveis
+                    if (!value || value <= 0) {
+                        showMessage('Preencha todos os valores de pagamento!', 'error');
+                        input.focus();
+                        return;
+                    }
+                }
+
+                pagamentos.push({
+                    payment_method_id: parseInt(input.dataset.methodId),
+                    amount: value
+                });
+            }
+            
+            // Validar se o total dos pagamentos corresponde ao valor da venda
+            const totalPagamentos = pagamentos.reduce((sum, p) => sum + p.amount, 0);
+            const valorVenda = parseFloat(document.getElementById('valor').value);
+            
+            if (Math.abs(totalPagamentos - valorVenda) > 0.01) {
+                mostrarInformacao('Erro de Valores', 'O total dos pagamentos deve corresponder ao valor da venda!');
+                return;
+            }
+            
+            // Validação adicional: garantir que não há valores negativos calculados
+            // (com 2+ métodos, o primeiro é o calculado automaticamente)
+            const primeiroInput = valorInputs[0];
+            if (primeiroInput && parseFloat(primeiroInput.value) < 0) {
+                mostrarInformacao('Erro de Valores', 'O valor total excede o somatório dos pagamentos informados!');
+                return;
+            }
+            
+            // Salvar novo produto se necessário
+            let produtoIdFinal = produtoId;
+            if (produtoId === 'outro' && document.getElementById('salvar_produto').checked) {
+                const novoProdutoId = await salvarNovoProduto(outroNome, valorVenda);
+                if (novoProdutoId) {
+                    // Usar o ID do produto salvo
+                    produtoIdFinal = novoProdutoId;
+                }
+            }
+            
             const formData = {
                 client_id: clienteSelecionado ? clienteSelecionado.id : null,
-                total: parseFloat(document.getElementById('valor').value),
+                total: valorVenda,
                 notes: document.getElementById('observacoes').value,
                 items: [{
-                    product_id: parseInt(document.getElementById('produto_servico_id').value),
+                    product_id: produtoIdFinal === 'outro' ? null : parseInt(produtoIdFinal),
+                    description: produtoIdFinal === 'outro' ? outroNome : null,
                     qty: 1,
-                    unit_price: parseFloat(document.getElementById('valor').value),
-                    subtotal: parseFloat(document.getElementById('valor').value)
-                }]
+                    unit_price: valorVenda,
+                    subtotal: valorVenda
+                }],
+                payments: pagamentos
             };
             
             fetch('/api/transaction', {
@@ -316,6 +889,34 @@
             document.getElementById('transacao-form').reset();
             clienteSelecionado = null;
             document.getElementById('cliente-results').style.display = 'none';
+            
+            // Resetar campo "outro"
+            document.getElementById('campo_outro_produto').style.display = 'none';
+            document.getElementById('outro_produto_nome').required = false;
+            document.getElementById('outro_produto_nome').value = '';
+            document.getElementById('salvar_produto').checked = false;
+            
+            // Resetar pagamentos para um único item vazio
+            const container = document.getElementById('pagamentos-container');
+            container.innerHTML = `
+                <div class="pagamento-item">
+                    <select class="payment-method" required onchange="handlePaymentMethodChange(this)">
+                        <option value="">Selecione o método</option>
+                    </select>
+                    <button type="button" class="btn btn-small btn-add-payment" onclick="adicionarPagamento()">+</button>
+                </div>
+            `;
+            
+            // Resetar container de valores
+            document.getElementById('pagamentos-valor-container').innerHTML = '';
+            document.getElementById('pagamentos-valor-container').style.display = 'none';
+            
+            // Resetar total
+            document.getElementById('payment-total').textContent = '0.00';
+            document.getElementById('payment-total').style.color = '#28a745';
+            
+            // Recarregar métodos de pagamento
+            carregarMetodosPagamento();
         }
 
         function showMessage(message, type) {
@@ -339,7 +940,153 @@
         // Carregar configurações ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
             carregarConfiguracoesCampos();
+            carregarMetodosPagamento();
+            
+            // Adicionar event listener para o campo valor
+            document.getElementById('valor').addEventListener('input', function() {
+                calcularValoresAutomaticos();
+                atualizarTotalPagamentos();
+            });
+        });
+        
+        // Sistema de Modais
+        function abrirModal(titulo, conteudo, botoes = [], tamanho = 'medium') {
+            const overlay = document.querySelector('.modal-overlay');
+            const container = document.querySelector('.modal-container');
+            const titleElement = container.querySelector('.modal-title');
+            const bodyElement = container.querySelector('.modal-body');
+            const footerElement = container.querySelector('.modal-footer');
+            
+            // Definir título (mostrar apenas se houver)
+            if (titulo) {
+                titleElement.textContent = titulo;
+                titleElement.style.display = 'block';
+            } else {
+                titleElement.style.display = 'none';
+            }
+            
+            // Definir conteúdo
+            if (typeof conteudo === 'string') {
+                bodyElement.innerHTML = conteudo;
+            } else {
+                bodyElement.innerHTML = '';
+                bodyElement.appendChild(conteudo);
+            }
+            
+            // Definir tamanho
+            container.className = `modal-container modal-${tamanho}`;
+            
+            // Adicionar botões
+            footerElement.innerHTML = '';
+            footerElement.style.display = 'flex';
+            if (botoes.length > 0) {
+                botoes.forEach(botao => {
+                    const button = document.createElement('button');
+                    button.textContent = botao.texto;
+                    button.className = botao.classe || 'btn';
+                    button.onclick = botao.onclick;
+                    if (botao.tipo) button.type = botao.tipo;
+                    footerElement.appendChild(button);
+                });
+            } else {
+                footerElement.style.display = 'none';
+            }
+            
+            // Mostrar modal
+            overlay.style.display = 'flex';
+            document.body.classList.add('modal-open');
+            
+            // Foco no primeiro elemento focável
+            setTimeout(() => {
+                const primeiroFocavel = container.querySelector('input, button, select, textarea');
+                if (primeiroFocavel) primeiroFocavel.focus();
+            }, 100);
+        }
+        
+        function fecharModal() {
+            const overlay = document.querySelector('.modal-overlay');
+            overlay.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+        
+        function confirmarAcao(mensagem, callback, titulo = 'Confirmar Ação') {
+            const botoes = [
+                {
+                    texto: 'Cancelar',
+                    classe: 'btn btn-secondary',
+                    onclick: () => fecharModal()
+                },
+                {
+                    texto: 'Confirmar',
+                    classe: 'btn btn-danger',
+                    onclick: () => {
+                        callback();
+                        fecharModal();
+                    }
+                }
+            ];
+            
+            abrirModal(titulo, `<p>${mensagem}</p>`, botoes, 'small');
+        }
+        
+        function mostrarInformacao(titulo, mensagem, callback = null) {
+            const botoes = callback ? [
+                {
+                    texto: 'OK',
+                    classe: 'btn btn-primary',
+                    onclick: () => {
+                        callback();
+                        fecharModal();
+                    }
+                }
+            ] : [
+                {
+                    texto: 'OK',
+                    classe: 'btn btn-primary',
+                    onclick: () => fecharModal()
+                }
+            ];
+            
+            abrirModal(titulo, `<p>${mensagem}</p>`, botoes, 'small');
+        }
+        
+        // Fechar modal ao clicar no overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.querySelector('.modal-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        fecharModal();
+                    }
+                });
+            }
+        });
+        
+        // Fechar modal com ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const overlay = document.querySelector('.modal-overlay');
+                if (overlay && overlay.style.display === 'flex') {
+                    fecharModal();
+                }
+            }
         });
     </script>
+    
+    <!-- Modal Container -->
+    <div class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" style="display: none;">Título</h3>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Conteúdo será inserido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <!-- Botões serão inseridos dinamicamente -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>

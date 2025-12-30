@@ -4,6 +4,25 @@ from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
 
+def _format_dt_local_br(dt: datetime) -> str:
+    """Formata datetime (armazenado em UTC) para horário local Brasil (UTC-3).
+    Retorna string no formato dd/mm/YYYY HH:MM.
+    """
+    if not dt:
+        return ''
+    from datetime import timedelta
+    dt_local = dt - timedelta(hours=3)
+    return dt_local.strftime('%d/%m/%Y %H:%M')
+
+def _format_dt_br(dt: datetime) -> str:
+    """Formata datetime para horário Brasil (UTC-3) sem conversão.
+    Retorna string no formato dd/mm/YYYY HH:MM.
+    """
+    if not dt:
+        return ''
+    # Assume que já está no fuso correto (sangrias), apenas formata
+    return dt.strftime('%d/%m/%Y %H:%M')
+
 @main_bp.route('/')
 def index():
     """Página principal com formulário de registro"""
@@ -75,7 +94,7 @@ def api_resumo():
                     'cliente': 'SANGRIA',
                     'produto': 'Retirada de Caixa',
                     'valor': float(t.total),
-                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'data': _format_dt_br(t.date),  # Sangrias já em horário local
                     'tipo': 'sangria'
                 })
             else:
@@ -90,7 +109,7 @@ def api_resumo():
                     'cliente': t.client.name if t.client else 'Não informado',
                     'produto': produto_nome,
                     'valor': float(t.total),
-                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'data': _format_dt_local_br(t.date),  # Vendas em UTC, converter para local
                     'tipo': 'venda'
                 })
         
@@ -176,6 +195,61 @@ def api_salvar_transaction():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@main_bp.route('/api/produtos-unicos')
+def api_produtos_unicos():
+    """API para lista de produtos únicos de todas as transações (incluindo deletados)"""
+    try:
+        # Buscar produtos únicos das transações
+        produtos_query = db.session.query(
+            Product.id,
+            Product.name,
+            Product.price,
+            db.func.count(TransactionItem.id).label('usage_count')
+        ).join(TransactionItem, Product.id == TransactionItem.product_id, isouter=True)\
+         .group_by(Product.id, Product.name, Product.price)\
+         .order_by(Product.name)
+        
+        produtos = produtos_query.all()
+        
+        # Adicionar produtos de transações sem ID (descrições personalizadas)
+        descricoes_unicas = db.session.query(
+            TransactionItem.description
+        ).filter(
+            TransactionItem.product_id.is_(None),
+            TransactionItem.description.isnot(None),
+            TransactionItem.description != ''
+        ).distinct().order_by(TransactionItem.description).all()
+        
+        resultado = []
+        
+        # Produtos cadastrados
+        for produto in produtos:
+            resultado.append({
+                'id': produto.id,
+                'name': produto.name,
+                'price': float(produto.price),
+                'usage_count': produto.usage_count,
+                'type': 'cadastrado'
+            })
+        
+        # Produtos personalizados (sem cadastro)
+        for desc in descricoes_unicas:
+            resultado.append({
+                'id': None,
+                'name': desc.description,
+                'price': None,
+                'usage_count': 1,
+                'type': 'personalizado'
+            })
+        
+        # Ordenar por nome
+        resultado.sort(key=lambda x: x['name'].lower())
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @main_bp.route('/api/produtos')
 def api_produtos():
     """API para lista de produtos"""
@@ -237,6 +311,30 @@ def api_remover_produto(produto_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@main_bp.route('/api/produtos/<int:produto_id>/preco', methods=['PUT'])
+def api_atualizar_preco(produto_id):
+    """API para atualizar preço de produto (afeta apenas futuras vendas)"""
+    try:
+        produto = Product.query.get_or_404(produto_id)
+        data = request.get_json()
+        
+        if not data.get('preco') or float(data['preco']) < 0:
+            return jsonify({'error': 'Preço inválido'}), 400
+        
+        # Atualizar preço do produto
+        produto.price = float(data['preco'])
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Preço atualizado com sucesso',
+            'novo_preco': float(produto.price)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @main_bp.route('/api/retirada', methods=['POST'])
 def api_retirada():
     """API para registrar retirada de caixa com tipo específico"""
@@ -278,7 +376,7 @@ def api_retirada():
         sangria = Transaction(
             total=-valor,  # Valor negativo para sangria
             notes=f"SANGRIA: {motivo} [{payment_method.name}]",
-            date=datetime.now()
+            date=datetime.utcnow()
         )
         
         db.session.add(sangria)
@@ -325,18 +423,25 @@ def api_saldo_caixa():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@main_bp.route('/api/relatorios')
+@main_bp.route('/api/relatorios', methods=['GET', 'POST'])
 def api_relatorios():
     """API para gerar relatórios"""
     try:
         # Forçar refresh dos dados para evitar cache
         db.session.expire_all()
         
-        # Obter parâmetros de data
-        data_inicio = request.args.get('data_inicio')
-        data_fim = request.args.get('data_fim')
-        cliente = request.args.get('cliente')
-        produto_id = request.args.get('produto')
+        # Obter parâmetros - suporta GET (query string) e POST (JSON)
+        if request.method == 'POST':
+            data = request.get_json() or {}
+            data_inicio = data.get('data_inicio')
+            data_fim = data.get('data_fim')
+            cliente = data.get('cliente')
+            produtos_ids = data.get('produtos', [])  # Array de IDs
+        else:
+            data_inicio = request.args.get('data_inicio')
+            data_fim = request.args.get('data_fim')
+            cliente = request.args.get('cliente')
+            produtos_ids = request.args.getlist('produto')  # GET: múltiplos valores
         
         # Construir query - MODIFICADO para incluir todas as transações
         query = Transaction.query.outerjoin(TransactionItem).outerjoin(Product).outerjoin(Client)
@@ -355,10 +460,56 @@ def api_relatorios():
         if cliente:
             query = query.filter(Client.name.contains(cliente))
         
-        if produto_id:
-            query = query.filter(Product.id == produto_id)
+        # Filtrar por múltiplos produtos
+        if produtos_ids:
+            # Separar produtos cadastrados de personalizados
+            produtos_cadastrados = []
+            produtos_personalizados = []
+            
+            for pid in produtos_ids:
+                # Converter para string para verificar prefixo
+                pid_str = str(pid)
+                if pid_str.startswith('custom_'):
+                    # Produto personalizado (descrição)
+                    nome_produto = pid_str.replace('custom_', '')
+                    produtos_personalizados.append(nome_produto)
+                else:
+                    # Produto cadastrado (ID)
+                    try:
+                        produtos_cadastrados.append(int(pid))
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Construir condições OR para produtos
+            from sqlalchemy import or_
+            condicoes_produto = []
+            
+            # Condição para produtos cadastrados por ID
+            if produtos_cadastrados:
+                condicoes_produto.append(Product.id.in_(produtos_cadastrados))
+            
+            # Condição para produtos personalizados por descrição
+            if produtos_personalizados:
+                condicoes_produto.append(TransactionItem.description.in_(produtos_personalizados))
+            
+            # Incluir sangrias/retiradas mesmo com filtro de produtos,
+            # pois sangrias não possuem TransactionItem/Product e seriam filtradas.
+            condicao_sangria = or_(
+                Transaction.total < 0,
+                Transaction.notes.like('SANGRIA:%'),
+                Transaction.notes.like('RETIRADA:%')
+            )
+
+            # Aplicar filtro com OR (qualquer condição de produto OU sangria)
+            if condicoes_produto:
+                query = query.filter(or_(condicao_sangria, or_(*condicoes_produto)))
+            else:
+                query = query.filter(condicao_sangria)
         
-        transactions = query.order_by(Transaction.date.desc()).all()
+        # Ordenação estável: por data (mais recente primeiro) e, em caso de empate,
+        # por id (mais recente primeiro). Isso garante que sangrias apareçam na
+        # ordem em que foram executadas.
+        transactions = query.order_by(Transaction.date.desc(), Transaction.id.desc()).all()
         
         # Formatar dados - MODIFICADO para lidar com sangrias e todas as transações
         dados = []
@@ -370,7 +521,7 @@ def api_relatorios():
                     'cliente': 'SANGRIA',
                     'produto': 'Retirada de Caixa',
                     'valor': float(t.total),  # Valor negativo
-                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'data': _format_dt_br(t.date),  # Sangrias já em horário local
                     'observacoes': t.notes.replace('SANGRIA: ', ''),
                     'tipo': 'sangria'
                 })
@@ -381,7 +532,7 @@ def api_relatorios():
                     'cliente': 'SANGRIA',
                     'produto': 'Retirada de Caixa',
                     'valor': float(t.total),  # Valor negativo
-                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'data': _format_dt_br(t.date),  # Sangrias já em horário local
                     'observacoes': t.notes.replace('RETIRADA: ', ''),
                     'tipo': 'sangria'
                 })
@@ -399,7 +550,7 @@ def api_relatorios():
                     'cliente': t.client.name if t.client else 'Não informado',
                     'produto': produto_nome,
                     'valor': float(t.total),
-                    'data': t.date.strftime('%d/%m/%Y %H:%M'),
+                    'data': _format_dt_local_br(t.date),  # Vendas em UTC, converter para local
                     'observacoes': t.notes or '',
                     'tipo': 'venda'
                 })
