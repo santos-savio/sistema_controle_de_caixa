@@ -69,8 +69,8 @@ def api_resumo():
         # Estatísticas básicas
         total_transacoes = Transaction.query.count()
         
-        # Saldo atual do caixa (mesma lógica da API de saldo)
-        saldo_atual = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        # Saldo atual do caixa (apenas vendas, sem descontar sangrias)
+        saldo_atual = db.session.query(func.sum(Transaction.total)).filter(Transaction.total > 0).scalar() or 0
         
         # Total de vendas (apenas transações positivas)
         total_vendas = db.session.query(func.sum(Transaction.total)).filter(Transaction.total > 0).scalar() or 0
@@ -346,6 +346,14 @@ def api_retirada():
         
         if not valor or not motivo:
             return jsonify({'error': 'Valor e motivo são obrigatórios'}), 400
+
+        try:
+            valor = float(valor)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Valor inválido'}), 400
+
+        if valor <= 0:
+            return jsonify({'error': 'Valor deve ser maior que zero'}), 400
         
         if not payment_method_id:
             return jsonify({'error': 'Tipo de pagamento é obrigatório'}), 400
@@ -355,12 +363,14 @@ def api_retirada():
         if not payment_method:
             return jsonify({'error': 'Método de pagamento inválido'}), 400
         
-        # Verificar saldo disponível para o método específico
+        # Verificar saldo disponível para o método específico (considera sangrias anteriores)
         from sqlalchemy import func
         saldo_metodo = db.session.query(func.sum(Payment.amount)).filter(
-            Payment.payment_method_id == payment_method_id,
-            Payment.amount > 0
+            Payment.payment_method_id == payment_method_id
         ).scalar() or 0
+
+        # Normalizar para float (evita comparação float vs Decimal)
+        saldo_metodo = float(saldo_metodo)
         
         if valor > saldo_metodo:
             return jsonify({
@@ -398,7 +408,7 @@ def api_retirada():
             'sangria_id': sangria.id,
             'saldo_anterior': float(saldo_metodo),
             'saldo_novo': float(novo_saldo),
-            'valor_retirado': valor,
+            'valor_retirado': float(valor),
             'metodo_nome': payment_method.name,
             'metodo_cor': payment_method.color
         })
@@ -409,12 +419,12 @@ def api_retirada():
 
 @main_bp.route('/api/saldo-caixa')
 def api_saldo_caixa():
-    """API para obter saldo atual do caixa"""
+    """API para obter saldo atual do caixa (apenas vendas, sem descontar sangrias)"""
     try:
-        # Calcular saldo total (soma de todas as transações)
+        # Calcular saldo total das vendas (apenas transações positivas)
         from sqlalchemy import func
         
-        saldo = db.session.query(func.sum(Transaction.total)).scalar() or 0
+        saldo = db.session.query(func.sum(Transaction.total)).filter(Transaction.total > 0).scalar() or 0
         
         return jsonify({
             'saldo': float(saldo)

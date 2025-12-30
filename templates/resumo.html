@@ -218,12 +218,8 @@
                     <div class="value" id="total-clientes">-</div>
                 </div>
                 <div class="summary-card">
-                    <h3>Total de Sangrias</h3>
+                    <h3>Saldo em Caixa</h3>
                     <div class="value" id="total-sangrias">-</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Saldo Atual</h3>
-                    <div class="value" id="saldo-atual">-</div>
                 </div>
             </div>
             
@@ -272,8 +268,7 @@
                     document.getElementById('total-transacoes').textContent = data.total_transacoes;
                     document.getElementById('total-valor').textContent = 'R$ ' + data.total_vendas.toFixed(2);
                     document.getElementById('total-clientes').textContent = data.total_clientes;
-                    document.getElementById('total-sangrias').textContent = 'R$ ' + data.total_sangrias.toFixed(2);
-                    document.getElementById('saldo-atual').textContent = 'R$ ' + data.saldo_atual.toFixed(2);
+                    document.getElementById('total-sangrias').textContent = 'R$ ' + (data.total_vendas - Math.abs(data.total_sangrias)).toFixed(2);
                     
                     // Atualizar transações recentes
                     const transacoesDiv = document.getElementById('transacoes-recentes');

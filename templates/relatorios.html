@@ -713,7 +713,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage(`Sangria registrada com sucesso! Saldo restante em caixa: R$ ${data.saldo_novo.toFixed(2)}`, 'success');
+                    showMessage(`Sangria registrada com sucesso!`, 'success');
                     
                     // Limpar formulário
                     document.getElementById('valor-retirada').value = '';
@@ -908,7 +908,7 @@
                 const totalVendas = dados.filter(item => item.valor > 0).length;
                 const totalSangrias = dados.filter(item => item.valor < 0).length;
                 const totalTransacoes = dados.length;
-                const totalValor = dados.reduce((sum, item) => sum + item.valor, 0);
+                const faturamento = dados.filter(item => item.valor > 0).reduce((sum, item) => sum + item.valor, 0);
                 const valorMedio = totalVendas > 0 ? dados.filter(item => item.valor > 0).reduce((sum, item) => sum + item.valor, 0) / totalVendas : 0;
                 
                 // Exibir estatísticas
@@ -929,9 +929,9 @@
                         <div class="description">Retiradas de caixa</div>
                     </div>
                     <div class="summary-card">
-                        <h3>Saldo Líquido</h3>
-                        <div class="value">R$ ${totalValor.toFixed(2)}</div>
-                        <div class="description">Vendas - Sangrias</div>
+                        <h3>Faturamento</h3>
+                        <div class="value">R$ ${faturamento.toFixed(2)}</div>
+                        <div class="description">Somatório das vendas</div>
                     </div>
                     <div class="summary-card">
                         <h3>Ticket Médio</h3>

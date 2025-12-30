@@ -138,7 +138,8 @@ def api_balances():
             code = balance.code
             total_sales = float(balance.total) if balance.total else 0
             total_sangrias = abs(sangria_dict.get(code, 0))
-            final_balance = total_sales - total_sangrias
+            # Saldo disponível no método (vendas - sangrias)
+            net_balance = total_sales - total_sangrias
             
             result.append({
                 'name': balance.name,
@@ -146,7 +147,7 @@ def api_balances():
                 'color': balance.color,
                 'total_sales': total_sales,
                 'total_sangrias': total_sangrias,
-                'balance': final_balance
+                'balance': net_balance
             })
         
         return jsonify({'balances': result})

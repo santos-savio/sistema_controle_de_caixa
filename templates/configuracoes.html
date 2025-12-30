@@ -182,6 +182,12 @@
         
         .btn-danger {
             background: #dc3545;
+            color: #000000;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
         }
         
         .btn-danger:hover {
@@ -267,10 +273,10 @@
             flex-direction: column;
         }
         
-        .modal-container.large {
-            width: 800px;
-            max-width: 800px;
-        }
+        .modal-medium { max-width: 600px; }
+        .modal-large { max-width: 800px; }
+        .modal-full { max-width: 95%; }
+        .modal-wide { max-width: 500px; }
         
         .modal-header {
             padding: 20px;
@@ -443,25 +449,6 @@
             <p>PIN atual: <span id="pin-status">Não definido</span></p>
             <div style="margin-bottom: 15px;">
                 <button class="btn" onclick="abrirModalPin()">Alterar PIN</button>
-            </div>
-            <div id="pin-form" style="display: none;">
-                <div id="pin-form-messages"></div>
-                <div class="form-group">
-                    <label for="pin-atual">PIN Atual:</label>
-                    <input type="password" id="pin-atual" placeholder="Digite o PIN atual" maxlength="4">
-                </div>
-                <div class="form-group">
-                    <label for="pin-novo">Novo PIN:</label>
-                    <input type="password" id="pin-novo" placeholder="Digite o novo PIN" maxlength="4">
-                </div>
-                <div class="form-group">
-                    <label for="pin-confirmar">Confirmar Novo PIN:</label>
-                    <input type="password" id="pin-confirmar" placeholder="Confirme o novo PIN" maxlength="4">
-                </div>
-                <div>
-                    <button class="btn btn-secondary" onclick="cancelarPin()">Cancelar</button>
-                    <button class="btn" onclick="salvarPinInline()">Salvar</button>
-                </div>
             </div>
         </div>
         
@@ -652,36 +639,42 @@
         }
 
         function abrirModalPin() {
-            const form = document.getElementById('pin-form');
-            if (form.style.display === 'none') {
-                form.style.display = 'block';
-                // Limpar campos e mensagens
-                document.getElementById('pin-atual').value = '';
-                document.getElementById('pin-novo').value = '';
-                document.getElementById('pin-confirmar').value = '';
-                document.getElementById('pin-form-messages').innerHTML = '';
-            } else {
-                form.style.display = 'none';
-            }
+            const modalBody = document.querySelector('.modal-body');
+            const modalContent = `
+                <div id="pin-form-messages"></div>
+                <div class="form-group">
+                    <label for="pin-atual">PIN Atual:</label>
+                    <input type="password" id="pin-atual" placeholder="Digite o PIN atual" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="pin-novo">Novo PIN:</label>
+                    <input type="password" id="pin-novo" placeholder="Digite o novo PIN" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="pin-confirmar">Confirmar Novo PIN:</label>
+                    <input type="password" id="pin-confirmar" placeholder="Confirme o novo PIN" maxlength="4">
+                </div>
+            `;
+            
+            abrirModal('Alterar PIN', modalContent, [
+                { text: 'Cancelar', class: 'btn-danger', onclick: () => fecharModal() },
+                { text: 'Salvar', class: 'btn', onclick: () => salvarPinModal() }
+            ], 'wide');
         }
-
-        function cancelarPin() {
-            document.getElementById('pin-form').style.display = 'none';
-        }
-
-        function salvarPinInline() {
+        
+        function salvarPinModal() {
             const pinAtual = document.getElementById('pin-atual').value;
             const pinNovo = document.getElementById('pin-novo').value;
             const pinConfirmar = document.getElementById('pin-confirmar').value;
             
             // Validações
             if (pinNovo.length !== 4 || !/^\d{4}$/.test(pinNovo)) {
-                showMessagePinForm('Novo PIN deve ter exatamente 4 dígitos numéricos!', 'error');
+                mostrarInformacao('Erro', 'Novo PIN deve ter exatamente 4 dígitos numéricos!');
                 return;
             }
             
             if (pinNovo !== pinConfirmar) {
-                showMessagePinForm('Confirmação do PIN não confere!', 'error');
+                mostrarInformacao('Erro', 'Confirmação do PIN não confere!');
                 return;
             }
             
@@ -699,14 +692,14 @@
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
-                        showMessagePinForm('PIN atual incorreto!', 'error');
+                        mostrarInformacao('Erro', 'PIN atual incorreto!');
                         return;
                     }
                     // Se o PIN atual estiver correto, salvar o novo
                     salvarNovoPin(pinNovo);
                 })
                 .catch(error => {
-                    showMessagePinForm('Erro ao verificar PIN atual: ' + error, 'error');
+                    mostrarInformacao('Erro', 'Erro ao verificar PIN atual: ' + error);
                 });
             } else {
                 // Se não há PIN atual, salvar direto
@@ -727,19 +720,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessagePinForm('PIN alterado com sucesso!', 'success');
-                    document.getElementById('pin-status').textContent = '●●●●';
-                    // Fechar formulário após sucesso
-                    setTimeout(() => {
-                        document.getElementById('pin-form').style.display = 'none';
-                        document.getElementById('pin-form-messages').innerHTML = '';
-                    }, 2000);
+                    mostrarInformacao('Sucesso', 'PIN atualizado com sucesso!');
+                    fecharModal();
+                    carregarPinStatus(); // Atualizar o PIN exibido
                 } else {
-                    showMessagePinForm('Erro ao salvar PIN: ' + (data.error || 'Erro desconhecido'), 'error');
+                    mostrarInformacao('Erro', 'Erro ao salvar PIN: ' + (data.error || 'Erro desconhecido'));
                 }
             })
             .catch(error => {
-                showMessagePinForm('Erro ao salvar PIN: ' + error, 'error');
+                mostrarInformacao('Erro', 'Erro ao salvar PIN: ' + error);
             });
         }
 
