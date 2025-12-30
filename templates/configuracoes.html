@@ -49,14 +49,14 @@
         }
         
         .config-section {
-            margin-bottom: 30px;
+            background: #f8f9fa;
             padding: 20px;
-            border: 1px solid #ddd;
             border-radius: 5px;
+            margin-bottom: 20px;
         }
         
         .config-section h3 {
-            color: #555;
+            color: #333;
             margin-bottom: 15px;
         }
         
@@ -241,7 +241,7 @@
             gap: 5px;
         }
         
-        .config-section {
+        .config-section-removed {
             margin-bottom: 30px;
             padding: 20px;
             border: 1px solid #ddd;
@@ -276,6 +276,7 @@
         .modal-medium { max-width: 600px; }
         .modal-large { max-width: 800px; }
         .modal-full { max-width: 95%; }
+        
         .modal-wide { max-width: 500px; }
         
         .modal-header {
@@ -335,11 +336,11 @@
             font-size: 14px;
         }
         
-        .pin-section {
+        .config-section {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 5px;
-            margin-top: 20px;
+            margin-bottom: 20px;
         }
         
         .pin-input {
@@ -413,10 +414,14 @@
         
         <div id="messages"></div>
         
+        <div style="margin-top: 30px; margin-bottom: 20px; text-align: center;">
+            <button class="btn btn-secondary" onclick="restaurarPadroes()">Restaurar Padrões</button>
+        </div>
+        
         <div class="config-section">
             <h3>Campos do Formulário</h3>
-            <div id="fields-list">
-                <!-- Campos serão carregados dinamicamente -->
+            <div style="margin-bottom: 15px;">
+                <button class="btn" onclick="abrirModalCamposFormulario()">Editar Campos do Formulário</button>
             </div>
         </div>
         
@@ -444,16 +449,12 @@
             </div>
         </div>
         
-        <div class="pin-section">
+        <div class="config-section">
             <h3>PIN de Acesso ao Resumo</h3>
             <p>PIN atual: <span id="pin-status">Não definido</span></p>
             <div style="margin-bottom: 15px;">
                 <button class="btn" onclick="abrirModalPin()">Alterar PIN</button>
             </div>
-        </div>
-        
-        <div style="margin-top: 30px; text-align: center;">
-            <button class="btn btn-secondary" onclick="restaurarPadroes()">Restaurar Padrões</button>
         </div>
     </div>
 
@@ -510,7 +511,10 @@
             // Definir tamanho
             container.className = 'modal-container';
             if (tamanho === 'large') {
-                container.classList.add('large');
+                container.style.maxWidth = '800px';
+                container.style.width = '90%';
+            } else if (tamanho === 'wide') {
+                container.style.maxWidth = '500px';
             }
             
             // Mostrar modal
@@ -547,36 +551,60 @@
         let camposConfig = [];
 
         function carregarConfiguracoes() {
-            // Carregar do localStorage ou usar padrão
+            // Carregar configurações salvas
             const salvos = localStorage.getItem('camposConfig');
             camposConfig = salvos ? JSON.parse(salvos) : [...camposPadrao];
             
-            renderizarCampos();
+            // Não renderiza mais campos na tela principal
+            // renderizarCampos();
             carregarProdutos();
             
             // Carregar PIN salvo
             carregarPinStatus();
         }
+        
 
-        function renderizarCampos() {
-            const container = document.getElementById('fields-list');
+        function abrirModalCamposFormulario() {
+            const modalContent = `
+                <div id="campos-form-messages"></div>
+                <div id="campos-edit-list">
+                    <!-- Campos serão carregados dinamicamente -->
+                </div>
+            `;
+            
+            abrirModal('Editar Campos do Formulário', modalContent, [
+                { text: 'Cancelar', class: 'btn-danger', onclick: () => fecharModal() },
+                { text: 'Salvar', class: 'btn', onclick: () => salvarCamposFormulario() }
+            ], 'large');
+            
+            // Carregar campos no modal
+            renderizarCamposNoModal();
+        }
+        
+        function renderizarCamposNoModal() {
+            const container = document.getElementById('campos-edit-list');
+            if (!container) return;
+            
             container.innerHTML = '';
             
             camposConfig.forEach(campo => {
                 const fieldItem = document.createElement('div');
                 fieldItem.className = 'field-item';
+                fieldItem.style.marginBottom = '15px';
+                fieldItem.style.padding = '15px';
+                fieldItem.style.border = '1px solid #ddd';
+                fieldItem.style.borderRadius = '5px';
                 
                 fieldItem.innerHTML = `
                     <div class="field-info">
-                        <div class="field-name">${campo.nome}</div>
-                        <div class="field-description">${campo.descricao}</div>
+                        <div class="field-name" style="font-weight: bold; color: #333; margin-bottom: 5px;">${campo.nome}</div>
+                        <div class="field-description" style="font-size: 14px; color: #666;">${campo.descricao}</div>
                     </div>
                     <div class="field-controls">
                         <div>
-                            <small>Visível</small>
+                            <small style="font-size: 12px; color: #666;">Visível</small>
                             <label class="toggle-switch">
-                                <input type="checkbox" ${campo.visivel ? 'checked' : ''} 
-                                       onchange="toggleCampo('${campo.id}', 'visivel', this.checked)">
+                                <input type="checkbox" id="campo-${campo.id}" ${campo.visivel ? 'checked' : ''}>
                                 <span class="slider"></span>
                             </label>
                         </div>
@@ -584,6 +612,30 @@
                 `;
                 container.appendChild(fieldItem);
             });
+        }
+        
+        function salvarCamposFormulario() {
+            // Atualizar configurações com os valores do modal
+            camposConfig.forEach(campo => {
+                const checkbox = document.getElementById(`campo-${campo.id}`);
+                if (checkbox) {
+                    campo.visivel = checkbox.checked;
+                }
+            });
+            
+            // Salvar no localStorage
+            localStorage.setItem('camposConfig', JSON.stringify(camposConfig));
+            
+            // Não atualiza mais a lista principal, pois não é exibida
+            // renderizarCampos();
+            
+            // Fechar modal e mostrar sucesso
+            fecharModal();
+            showMessage('Configurações dos campos salvas com sucesso!', 'success');
+        }
+
+        function renderizarCampos() {
+            // Não renderiza mais na tela principal, apenas no modal
         }
 
         function toggleCampo(campoId, propriedade, valor) {
@@ -599,7 +651,8 @@
         function restaurarPadroes() {
             if (confirm('Tem certeza que deseja restaurar as configurações padrão?')) {
                 camposConfig = [...camposPadrao];
-                renderizarCampos();
+                // Não renderiza mais na tela principal
+                // renderizarCampos();
                 localStorage.removeItem('camposConfig');
                 // Não remove mais o PIN do banco, apenas atualiza a interface
                 carregarPinStatus();
