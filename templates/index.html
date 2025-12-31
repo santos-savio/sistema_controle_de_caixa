@@ -102,9 +102,8 @@
         }
         
         .btn-small {
-            padding: 5px 10px;
+            padding: 8px 16px;
             font-size: 14px;
-            margin: 0;
         }
         
         .btn-add-payment {
@@ -306,14 +305,60 @@
             background: #545b62;
         }
         
-        .btn-remove {
-            background: #dc3545;
-            color: white;
-            border: none;
+        .produto-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        
+        .produto-info {
+            flex: 1;
+        }
+        
+        .produto-nome {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .produto-detalhes {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .produto-acoes {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-editar, .btn-excluir {
             padding: 5px 10px;
+            font-size: 12px;
+            border: none;
             border-radius: 3px;
             cursor: pointer;
-            margin-left: 10px;
+        }
+        
+        .btn-editar {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-editar:hover {
+            background: #e0a800;
+        }
+        
+        .btn-excluir {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-excluir:hover {
+            background: #c82333;
         }
         
         .navigation {
@@ -373,20 +418,23 @@
             </div>
             
             <div class="form-group" id="campo_produto_servico">
-                <label for="produto_servico_id">Produto/Serviço:</label>
-                <select id="produto_servico_id" name="produto_servico_id" required onchange="handleProdutoChange()">
-                    <option value="">Selecione um produto/serviço</option>
-                    <option value="outro">Outro</option>
-                    {% for produto in produtos %}
-                    <option value="{{ produto.id }}" data-preco="{{ produto.price }}">{{ produto.name }} - R$ {{ "%.2f"|format(produto.price) }}</option>
-                    {% endfor %}
-                </select>
+                <label for="produto_servico_id">Adicionar Produto/Serviço:</label>
+                <div style="display: flex; gap: 10px; align-items: end;">
+                    <select id="produto_servico_id" name="produto_servico_id" onchange="handleProdutoChange()" style="flex: 1;">
+                        <option value="">Selecione um produto/serviço</option>
+                        <option value="outro">Outro</option>
+                        {% for produto in produtos %}
+                        <option value="{{ produto.id }}" data-preco="{{ produto.price }}">{{ produto.name }} - R$ {{ "%.2f"|format(produto.price) }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-small" onclick="adicionarProduto()">Adicionar</button>
+                </div>
             </div>
             
             <div class="form-group" id="campo_outro_produto" style="display: none;">
                 <label for="outro_produto_nome">Nome do Produto/Serviço:</label>
                 <div style="display: flex; gap: 10px; align-items: end;">
-                    <input type="text" id="outro_produto_nome" placeholder="Digite o nome do produto/serviço" style="flex: 1;">
+                    <input type="text" id="outro_produto_nome" name="outro_produto_nome" placeholder="Digite o nome do produto/serviço" style="flex: 1;">
                     <div style="display: flex; gap: 5px; align-items: center;">
                         <input type="checkbox" id="salvar_produto" style="width: auto;">
                         <label for="salvar_produto" style="margin: 0; white-space: nowrap;">Salvar na lista</label>
@@ -394,9 +442,23 @@
                 </div>
             </div>
             
-            <div class="form-group" id="campo_valor">
+            <div class="form-group" id="campo_valor" style="display: none;">
                 <label for="valor">Valor (R$):</label>
-                <input type="number" id="valor" name="valor" step="0.01" min="0" required>
+                <input type="number" id="valor" name="valor" step="0.01" min="0">
+            </div>
+            
+            <div class="form-group" id="campo_lista_produtos">
+                <label>Produtos Adicionados:</label>
+                <div id="produtos-lista" style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; min-height: 100px; background: #f9f9f9;">
+                    <div id="produtos-vazios" style="text-align: center; color: #999; padding: 20px;">
+                        Nenhum produto adicionado ainda. Selecione um produto acima e clique em "Adicionar".
+                    </div>
+                    <div id="produtos-container" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="form-group" id="campo_total_geral">
+                <label>Total da Venda: <strong>R$ <span id="total-geral">0.00</span></strong></label>
             </div>
             
             <div class="form-group" id="campo_observacoes">
@@ -422,14 +484,47 @@
                 </div>
             </div>
             
-            <button type="submit" class="btn">Salvar</button>
+            <button type="submit" class="btn" id="btn-salvar" disabled>Salvar</button>
             <button type="button" class="btn btn-secondary" onclick="limparFormulario()">Limpar</button>
         </form>
+    </div>
+    
+    <!-- Modal para editar produto -->
+    <div id="modal-editar-produto" class="modal-overlay">
+        <div class="modal-container modal-small">
+            <div class="modal-header">
+                <h3 class="modal-title">Editar Produto</h3>
+                <button class="modal-close" onclick="fecharModalEditar()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-produto-nome">Produto:</label>
+                    <input type="text" id="edit-produto-nome" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="edit-produto-quantidade">Quantidade:</label>
+                    <input type="number" id="edit-produto-quantidade" min="1" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-produto-preco">Preço Unitário (R$):</label>
+                    <input type="number" id="edit-produto-preco" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Subtotal: <strong>R$ <span id="edit-produto-subtotal">0.00</span></strong></label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditar()">Cancelar</button>
+                <button type="button" class="btn" onclick="salvarEdicaoProduto()">Salvar</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let clienteSelecionado = null;
         let clienteFieldVisible = true;
+        let produtosAdicionados = []; // Array para armazenar os produtos
+        let produtoEditandoIndex = null; // Índice do produto sendo editado
 
         // Carregar configurações dos campos
         function carregarConfiguracoesCampos() {
@@ -483,26 +578,219 @@
             }
         }
 
+        // Função para adicionar produto à lista
+        function adicionarProduto() {
+            const select = document.getElementById('produto_servico_id');
+            const produtoId = select.value;
+            const outroNome = document.getElementById('outro_produto_nome').value;
+            
+            if (!produtoId) {
+                showMessage('Selecione um produto/serviço!', 'error');
+                return;
+            }
+            
+            if (produtoId === 'outro' && !outroNome) {
+                showMessage('Digite o nome do produto/serviço!', 'error');
+                return;
+            }
+            
+            let nomeProduto = '';
+            let precoUnitario = 0;
+            let produtoIdFinal = produtoId;
+            
+            if (produtoId === 'outro') {
+                nomeProduto = outroNome;
+                precoUnitario = parseFloat(document.getElementById('valor').value) || 0;
+                
+                // Validar preço para produtos "outro"
+                if (precoUnitario <= 0) {
+                    showMessage('Digite um valor válido para o produto!', 'error');
+                    return;
+                }
+            } else {
+                const selectedOption = select.options[select.selectedIndex];
+                nomeProduto = selectedOption.text.split(' - R$ ')[0];
+                precoUnitario = parseFloat(selectedOption.dataset.preco) || 0;
+            }
+            
+            // Adicionar ao array
+            const novoProduto = {
+                id: produtoIdFinal,
+                nome: nomeProduto,
+                quantidade: 1,
+                precoUnitario: precoUnitario,
+                subtotal: precoUnitario
+            };
+            
+            produtosAdicionados.push(novoProduto);
+            
+            // Limpar seleção
+            select.value = '';
+            
+            // Limpar campos "outro" e remover required
+            const outroCampo = document.getElementById('campo_outro_produto');
+            const valorCampo = document.getElementById('campo_valor');
+            const outroInput = document.getElementById('outro_produto_nome');
+            const valorInput = document.getElementById('valor');
+            
+            outroCampo.style.display = 'none';
+            valorCampo.style.display = 'none';
+            outroInput.required = false;
+            outroInput.value = '';
+            valorInput.value = '';
+            document.getElementById('salvar_produto').checked = false;
+            
+            // Atualizar interface
+            renderizarProdutos();
+            calcularTotalGeral();
+            atualizarBotaoSalvar();
+        }
+        
+        // Função para renderizar a lista de produtos
+        function renderizarProdutos() {
+            const container = document.getElementById('produtos-container');
+            const vazios = document.getElementById('produtos-vazios');
+            
+            if (produtosAdicionados.length === 0) {
+                container.style.display = 'none';
+                vazios.style.display = 'block';
+                return;
+            }
+            
+            container.style.display = 'block';
+            vazios.style.display = 'none';
+            
+            container.innerHTML = produtosAdicionados.map((produto, index) => `
+                <div class="produto-item">
+                    <div class="produto-info">
+                        <div class="produto-nome">${produto.nome}</div>
+                        <div class="produto-detalhes">
+                            Quantidade: ${produto.quantidade} | 
+                            Preço: R$ ${produto.precoUnitario.toFixed(2)} | 
+                            Subtotal: R$ ${produto.subtotal.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="produto-acoes">
+                        <button class="btn-editar" onclick="editarProduto(${index})">Editar</button>
+                        <button class="btn-excluir" onclick="excluirProduto(${index})">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Função para calcular o total geral
+        function calcularTotalGeral() {
+            const total = produtosAdicionados.reduce((soma, produto) => soma + produto.subtotal, 0);
+            document.getElementById('total-geral').textContent = total.toFixed(2);
+            
+            // Atualizar total dos pagamentos
+            document.getElementById('payment-total').textContent = total.toFixed(2);
+            
+            // Atualizar campos de valor dos pagamentos para usar o total geral
+            const valorInputs = document.querySelectorAll('.payment-amount');
+            const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
+            
+            valorInputs.forEach(input => {
+                if (input.hasAttribute('readonly')) {
+                    input.value = totalGeral.toFixed(2);
+                }
+            });
+        }
+        
+        // Função para atualizar estado do botão salvar
+        function atualizarBotaoSalvar() {
+            const btnSalvar = document.getElementById('btn-salvar');
+            btnSalvar.disabled = produtosAdicionados.length === 0;
+        }
+        
+        // Função para editar produto
+        function editarProduto(index) {
+            produtoEditandoIndex = index;
+            const produto = produtosAdicionados[index];
+            
+            // Preencher modal
+            document.getElementById('edit-produto-nome').value = produto.nome;
+            document.getElementById('edit-produto-quantidade').value = produto.quantidade;
+            document.getElementById('edit-produto-preco').value = produto.precoUnitario;
+            document.getElementById('edit-produto-subtotal').textContent = produto.subtotal.toFixed(2);
+            
+            // Mostrar modal
+            document.getElementById('modal-editar-produto').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // Função para fechar modal de edição
+        function fecharModalEditar() {
+            document.getElementById('modal-editar-produto').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            produtoEditandoIndex = null;
+        }
+        
+        // Função para salvar edição de produto
+        function salvarEdicaoProduto() {
+            if (produtoEditandoIndex === null) return;
+            
+            const quantidade = parseInt(document.getElementById('edit-produto-quantidade').value);
+            const precoUnitario = parseFloat(document.getElementById('edit-produto-preco').value);
+            
+            if (quantidade < 1 || !precoUnitario || precoUnitario < 0) {
+                showMessage('Valores inválidos!', 'error');
+                return;
+            }
+            
+            // Atualizar produto
+            produtosAdicionados[produtoEditandoIndex].quantidade = quantidade;
+            produtosAdicionados[produtoEditandoIndex].precoUnitario = precoUnitario;
+            produtosAdicionados[produtoEditandoIndex].subtotal = quantidade * precoUnitario;
+            
+            // Atualizar interface
+            renderizarProdutos();
+            calcularTotalGeral();
+            fecharModalEditar();
+        }
+        
+        // Função para excluir produto
+        function excluirProduto(index) {
+            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                produtosAdicionados.splice(index, 1);
+                renderizarProdutos();
+                calcularTotalGeral();
+                atualizarBotaoSalvar();
+            }
+        }
+        
+        // Event listeners para o modal de edição
+        document.getElementById('edit-produto-quantidade').addEventListener('input', function() {
+            const quantidade = parseInt(this.value) || 0;
+            const preco = parseFloat(document.getElementById('edit-produto-preco').value) || 0;
+            document.getElementById('edit-produto-subtotal').textContent = (quantidade * preco).toFixed(2);
+        });
+        
+        document.getElementById('edit-produto-preco').addEventListener('input', function() {
+            const quantidade = parseInt(document.getElementById('edit-produto-quantidade').value) || 0;
+            const preco = parseFloat(this.value) || 0;
+            document.getElementById('edit-produto-subtotal').textContent = (quantidade * preco).toFixed(2);
+        });
+
         // Lidar com mudança no campo de produto/serviço
         function handleProdutoChange() {
             const select = document.getElementById('produto_servico_id');
             const outroCampo = document.getElementById('campo_outro_produto');
             const outroInput = document.getElementById('outro_produto_nome');
+            const valorCampo = document.getElementById('campo_valor');
+            const valorInput = document.getElementById('valor');
             
             if (select.value === 'outro') {
                 outroCampo.style.display = 'block';
+                valorCampo.style.display = 'block';
                 outroInput.required = true;
                 outroInput.focus();
             } else {
                 outroCampo.style.display = 'none';
+                valorCampo.style.display = 'none';
                 outroInput.required = false;
                 outroInput.value = '';
-                
-                // Atualizar valor se for um produto existente
-                const selectedOption = select.options[select.selectedIndex];
-                if (selectedOption && selectedOption.dataset.preco) {
-                    document.getElementById('valor').value = selectedOption.dataset.preco;
-                }
+                valorInput.value = '';
             }
         }
 
@@ -510,7 +798,6 @@
         function handlePaymentMethodChange(select) {
             atualizarCamposValor();
         }
-
         // Adicionar novo pagamento
         function adicionarPagamento() {
             const container = document.getElementById('pagamentos-container');
@@ -609,10 +896,10 @@
 
             // Preencher automaticamente se houver apenas um método
             if (metodosSelecionados.length === 1) {
-                const valorTotal = parseFloat(document.getElementById('valor').value) || 0;
+                const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
                 const onlyInput = document.querySelector('.payment-amount');
                 if (onlyInput) {
-                    onlyInput.value = valorTotal.toFixed(2);
+                    onlyInput.value = totalGeral.toFixed(2);
                 }
             }
 
@@ -623,18 +910,18 @@
         // Calcular valores automáticos
         function calcularValoresAutomaticos() {
             const valorInputs = document.querySelectorAll('.payment-amount');
-            const valorTotal = parseFloat(document.getElementById('valor').value) || 0;
+            const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
 
             if (valorInputs.length === 0) return;
 
-            // Se há apenas um método, sempre usar o valor total
+            // Se há apenas um método, sempre usar o valor total geral
             if (valorInputs.length === 1) {
-                valorInputs[0].value = valorTotal.toFixed(2);
+                valorInputs[0].value = totalGeral.toFixed(2);
                 atualizarTotalPagamentos();
                 return;
             }
 
-            // Se há múltiplos métodos, calcular o PRIMEIRO como diferença do total
+            // Se há múltiplos métodos, calcular o PRIMEIRO como diferença do total geral
             let somaOutros = 0;
             valorInputs.forEach((input, index) => {
                 if (index > 0) {
@@ -643,7 +930,7 @@
             });
 
             const primeiroInput = valorInputs[0];
-            const valorPrimeiro = valorTotal - somaOutros;
+            const valorPrimeiro = totalGeral - somaOutros;
 
             if (valorPrimeiro >= 0) {
                 primeiroInput.value = valorPrimeiro.toFixed(2);
@@ -671,11 +958,11 @@
             document.getElementById('payment-total').textContent = total.toFixed(2);
             
             // Verificar se o total corresponde ao valor da venda
-            const valorVenda = parseFloat(document.getElementById('valor').value) || 0;
+            const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
             const totalPagamentos = total;
             
-            if (valorVenda > 0 && totalPagamentos > 0) {
-                if (Math.abs(totalPagamentos - valorVenda) > 0.01) {
+            if (totalGeral > 0 && totalPagamentos > 0) {
+                if (Math.abs(totalPagamentos - totalGeral) > 0.01) {
                     document.getElementById('payment-total').style.color = '#dc3545';
                 } else {
                     document.getElementById('payment-total').style.color = '#28a745';
@@ -771,18 +1058,9 @@
                 return;
             }
             
-            // Validar produto/serviço
-            const produtoSelect = document.getElementById('produto_servico_id');
-            const produtoId = produtoSelect.value;
-            const outroNome = document.getElementById('outro_produto_nome').value;
-            
-            if (!produtoId) {
-                showMessage('Selecione um produto/serviço!', 'error');
-                return;
-            }
-            
-            if (produtoId === 'outro' && !outroNome) {
-                showMessage('Digite o nome do produto/serviço!', 'error');
+            // Validar se há produtos adicionados
+            if (produtosAdicionados.length === 0) {
+                showMessage('Adicione pelo menos um produto!', 'error');
                 return;
             }
             
@@ -840,27 +1118,33 @@
                 return;
             }
             
-            // Salvar novo produto se necessário
-            let produtoIdFinal = produtoId;
-            if (produtoId === 'outro' && document.getElementById('salvar_produto').checked) {
-                const novoProdutoId = await salvarNovoProduto(outroNome, valorVenda);
-                if (novoProdutoId) {
-                    // Usar o ID do produto salvo
-                    produtoIdFinal = novoProdutoId;
+            // Salvar novos produtos se necessário
+            for (let i = 0; i < produtosAdicionados.length; i++) {
+                const produto = produtosAdicionados[i];
+                if (produto.id === 'outro') {
+                    const novoProdutoId = await salvarNovoProduto(produto.nome, produto.precoUnitario);
+                    if (novoProdutoId) {
+                        produtosAdicionados[i].id = novoProdutoId;
+                    }
                 }
             }
             
+            // Preparar items para o backend
+            const items = produtosAdicionados.map(produto => ({
+                product_id: produto.id === 'outro' ? null : parseInt(produto.id),
+                description: produto.id === 'outro' ? produto.nome : null,
+                qty: produto.quantidade,
+                unit_price: produto.precoUnitario,
+                subtotal: produto.subtotal
+            }));
+            
+            const totalGeral = produtosAdicionados.reduce((soma, produto) => soma + produto.subtotal, 0);
+            
             const formData = {
                 client_id: clienteSelecionado ? clienteSelecionado.id : null,
-                total: valorVenda,
+                total: totalGeral,
                 notes: document.getElementById('observacoes').value,
-                items: [{
-                    product_id: produtoIdFinal === 'outro' ? null : parseInt(produtoIdFinal),
-                    description: produtoIdFinal === 'outro' ? outroNome : null,
-                    qty: 1,
-                    unit_price: valorVenda,
-                    subtotal: valorVenda
-                }],
+                items: items,
                 payments: pagamentos
             };
             
@@ -890,11 +1174,24 @@
             clienteSelecionado = null;
             document.getElementById('cliente-results').style.display = 'none';
             
-            // Resetar campo "outro"
-            document.getElementById('campo_outro_produto').style.display = 'none';
-            document.getElementById('outro_produto_nome').required = false;
-            document.getElementById('outro_produto_nome').value = '';
+            // Resetar campo "outro" e remover required
+            const outroCampo = document.getElementById('campo_outro_produto');
+            const valorCampo = document.getElementById('campo_valor');
+            const outroInput = document.getElementById('outro_produto_nome');
+            const valorInput = document.getElementById('valor');
+            
+            outroCampo.style.display = 'none';
+            valorCampo.style.display = 'none';
+            outroInput.required = false;
+            outroInput.value = '';
+            valorInput.value = '';
             document.getElementById('salvar_produto').checked = false;
+            
+            // Resetar produtos
+            produtosAdicionados = [];
+            renderizarProdutos();
+            calcularTotalGeral();
+            atualizarBotaoSalvar();
             
             // Resetar pagamentos para um único item vazio
             const container = document.getElementById('pagamentos-container');
@@ -937,16 +1234,24 @@
                 document.getElementById('cliente-results').style.display = 'none';
             }
         });
+        
+        // Fechar modal ao clicar fora
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('modal-editar-produto');
+            if (e.target === modal) {
+                fecharModalEditar();
+            }
+        });
+        
         // Carregar configurações ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
             carregarConfiguracoesCampos();
             carregarMetodosPagamento();
             
-            // Adicionar event listener para o campo valor
-            document.getElementById('valor').addEventListener('input', function() {
-                calcularValoresAutomaticos();
-                atualizarTotalPagamentos();
-            });
+            // Inicializar interface
+            renderizarProdutos();
+            calcularTotalGeral();
+            atualizarBotaoSalvar();
         });
         
         // Sistema de Modais
