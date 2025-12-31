@@ -447,6 +447,11 @@
                 <input type="number" id="valor" name="valor" step="0.01" min="0">
             </div>
             
+            <div class="form-group" id="campo_valor_manual" style="display: none;">
+                <label for="valor_manual">Valor da Venda (R$):</label>
+                <input type="number" id="valor_manual" name="valor_manual" step="0.01" min="0" placeholder="Digite o valor total da venda">
+            </div>
+            
             <div class="form-group" id="campo_lista_produtos">
                 <label>Produtos Adicionados:</label>
                 <div id="produtos-lista" style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; min-height: 100px; background: #f9f9f9;">
@@ -535,6 +540,10 @@
                 { id: 'observacoes', nome: 'Observações', descricao: 'Notas adicionais sobre a venda', visivel: true }
             ];
             
+            // Verificar se o campo produto/serviço está desabilitado
+            const campoProdutoConfig = camposConfig.find(c => c.id === 'produto_servico');
+            const produtoServicoDesabilitado = campoProdutoConfig && !campoProdutoConfig.visivel;
+            
             // Aplicar visibilidade dos campos
             camposConfig.forEach(campo => {
                 const campoElement = document.getElementById(`campo_${campo.id}`);
@@ -543,10 +552,42 @@
                 }
             });
             
-            // Campo valor sempre visível (obrigatório)
-            const campoValor = document.getElementById('campo_valor');
-            if (campoValor) {
-                campoValor.style.display = 'block';
+            // Se produto/serviço está desabilitado, mostrar campo de valor manual e ocultar lista de produtos
+            if (produtoServicoDesabilitado) {
+                // Mostrar campo de valor manual
+                const campoValorManual = document.getElementById('campo_valor_manual');
+                if (campoValorManual) {
+                    campoValorManual.style.display = 'block';
+                }
+                
+                // Ocultar lista de produtos
+                const campoListaProdutos = document.getElementById('campo_lista_produtos');
+                if (campoListaProdutos) {
+                    campoListaProdutos.style.display = 'none';
+                }
+                
+                // Ocultar campo outro produto
+                const campoOutroProduto = document.getElementById('campo_outro_produto');
+                if (campoOutroProduto) {
+                    campoOutroProduto.style.display = 'none';
+                }
+                
+                // Adicionar listener para atualizar total quando o valor manual mudar
+                const valorManualInput = document.getElementById('valor_manual');
+                if (valorManualInput) {
+                    valorManualInput.addEventListener('input', atualizarTotalManual);
+                }
+            } else {
+                // Modo normal com produtos
+                const campoValorManual = document.getElementById('campo_valor_manual');
+                if (campoValorManual) {
+                    campoValorManual.style.display = 'none';
+                }
+                
+                const campoListaProdutos = document.getElementById('campo_lista_produtos');
+                if (campoListaProdutos) {
+                    campoListaProdutos.style.display = 'block';
+                }
             }
             
             // Campo pagamentos sempre visível (obrigatório)
@@ -576,6 +617,18 @@
             } catch (error) {
                 console.error('Erro ao carregar métodos de pagamento:', error);
             }
+        }
+
+        // Função para atualizar total manual (quando produto/serviço está desabilitado)
+        function atualizarTotalManual() {
+            const valorManual = parseFloat(document.getElementById('valor_manual').value) || 0;
+            document.getElementById('total-geral').textContent = valorManual.toFixed(2);
+            
+            // Atualizar botão salvar
+            atualizarBotaoSalvar();
+            
+            calcularValoresAutomaticos();
+            atualizarTotalPagamentos();
         }
 
         // Função para adicionar produto à lista
@@ -700,7 +753,19 @@
         // Função para atualizar estado do botão salvar
         function atualizarBotaoSalvar() {
             const btnSalvar = document.getElementById('btn-salvar');
-            btnSalvar.disabled = produtosAdicionados.length === 0;
+            
+            // Verificar se está em modo manual
+            const valorManualInput = document.getElementById('valor_manual');
+            const produtoServicoDesabilitado = valorManualInput && valorManualInput.parentElement.style.display !== 'none';
+            
+            if (produtoServicoDesabilitado) {
+                // Modo manual: habilitar se houver valor manual > 0
+                const valorManual = parseFloat(document.getElementById('valor_manual').value) || 0;
+                btnSalvar.disabled = valorManual <= 0;
+            } else {
+                // Modo normal: habilitar se houver produtos
+                btnSalvar.disabled = produtosAdicionados.length === 0;
+            }
         }
         
         // Função para editar produto
@@ -910,7 +975,17 @@
         // Calcular valores automáticos
         function calcularValoresAutomaticos() {
             const valorInputs = document.querySelectorAll('.payment-amount');
-            const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
+            
+            // Verificar se está em modo manual
+            const valorManualInput = document.getElementById('valor_manual');
+            const produtoServicoDesabilitado = valorManualInput && valorManualInput.parentElement.style.display !== 'none';
+            
+            let totalGeral;
+            if (produtoServicoDesabilitado) {
+                totalGeral = parseFloat(document.getElementById('valor_manual').value) || 0;
+            } else {
+                totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
+            }
 
             if (valorInputs.length === 0) return;
 
@@ -947,26 +1022,34 @@
 
         // Atualizar total dos pagamentos
         function atualizarTotalPagamentos() {
-            const amounts = document.querySelectorAll('.payment-amount');
+            const valorInputs = document.querySelectorAll('.payment-amount');
             let total = 0;
-            
-            amounts.forEach(input => {
-                const value = parseFloat(input.value) || 0;
-                total += value;
+            valorInputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
             });
-            
             document.getElementById('payment-total').textContent = total.toFixed(2);
-            
+
             // Verificar se o total corresponde ao valor da venda
-            const totalGeral = parseFloat(document.getElementById('total-geral').textContent) || 0;
-            const totalPagamentos = total;
+            const valorManualInput = document.getElementById('valor_manual');
+            const produtoServicoDesabilitado = valorManualInput && valorManualInput.parentElement.style.display !== 'none';
             
-            if (totalGeral > 0 && totalPagamentos > 0) {
-                if (Math.abs(totalPagamentos - totalGeral) > 0.01) {
+            let totalVenda;
+            if (produtoServicoDesabilitado) {
+                totalVenda = parseFloat(document.getElementById('valor_manual').value) || 0;
+            } else {
+                totalVenda = parseFloat(document.getElementById('total-geral').textContent) || 0;
+            }
+            
+            const totalPagamentos = total;
+
+            if (totalVenda > 0 && totalPagamentos > 0) {
+                if (Math.abs(totalPagamentos - totalVenda) > 0.01) {
                     document.getElementById('payment-total').style.color = '#dc3545';
                 } else {
                     document.getElementById('payment-total').style.color = '#28a745';
                 }
+            } else {
+                document.getElementById('payment-total').style.color = '#6c757d';
             }
         }
 
@@ -1058,10 +1141,22 @@
                 return;
             }
             
-            // Validar se há produtos adicionados
-            if (produtosAdicionados.length === 0) {
+            // Verificar se há produtos adicionados ou se está em modo manual
+            const valorManualInputCheck = document.getElementById('valor_manual');
+            const produtoServicoDesabilitadoCheck = valorManualInputCheck && valorManualInputCheck.parentElement.style.display !== 'none';
+            
+            if (!produtoServicoDesabilitadoCheck && produtosAdicionados.length === 0) {
                 showMessage('Adicione pelo menos um produto!', 'error');
                 return;
+            }
+            
+            if (produtoServicoDesabilitadoCheck) {
+                // Validar valor manual
+                const valorManual = parseFloat(document.getElementById('valor_manual').value) || 0;
+                if (valorManual <= 0) {
+                    showMessage('Digite um valor válido para a venda!', 'error');
+                    return;
+                }
             }
             
             // Validar pagamentos
@@ -1103,7 +1198,14 @@
             
             // Validar se o total dos pagamentos corresponde ao valor da venda
             const totalPagamentos = pagamentos.reduce((sum, p) => sum + p.amount, 0);
-            const valorVenda = parseFloat(document.getElementById('valor').value);
+            
+            // Usar as variáveis já definidas anteriormente para evitar duplicação
+            let valorVenda;
+            if (produtoServicoDesabilitadoCheck) {
+                valorVenda = parseFloat(document.getElementById('valor_manual').value) || 0;
+            } else {
+                valorVenda = parseFloat(document.getElementById('valor').value) || 0;
+            }
             
             if (Math.abs(totalPagamentos - valorVenda) > 0.01) {
                 mostrarInformacao('Erro de Valores', 'O total dos pagamentos deve corresponder ao valor da venda!');
@@ -1118,30 +1220,66 @@
                 return;
             }
             
-            // Salvar novos produtos se necessário
-            for (let i = 0; i < produtosAdicionados.length; i++) {
-                const produto = produtosAdicionados[i];
-                if (produto.id === 'outro') {
-                    const novoProdutoId = await salvarNovoProduto(produto.nome, produto.precoUnitario);
-                    if (novoProdutoId) {
-                        produtosAdicionados[i].id = novoProdutoId;
+            // Determinar se está em modo manual
+            const valorManualInputMode = document.getElementById('valor_manual');
+            const produtoServicoDesabilitadoMode = valorManualInputMode && valorManualInputMode.parentElement.style.display !== 'none';
+            
+            let items = [];
+            let totalGeral = 0;
+            let clienteId = null;
+            let clienteNome = '-';
+            
+            if (produtoServicoDesabilitadoMode) {
+                // Modo manual: criar item único
+                const valorManual = parseFloat(document.getElementById('valor_manual').value) || 0;
+                totalGeral = valorManual;
+                
+                items = [{
+                    product_id: null,
+                    description: 'Não informado',
+                    qty: 1,
+                    unit_price: valorManual,
+                    subtotal: valorManual
+                }];
+                
+                // Cliente padrão para modo manual
+                if (clienteSelecionado) {
+                    clienteId = clienteSelecionado.id;
+                    clienteNome = clienteSelecionado.name;
+                }
+            } else {
+                // Modo normal com múltiplos produtos
+                // Salvar novos produtos se necessário
+                for (let i = 0; i < produtosAdicionados.length; i++) {
+                    const produto = produtosAdicionados[i];
+                    if (produto.id === 'outro') {
+                        const novoProdutoId = await salvarNovoProduto(produto.nome, produto.precoUnitario);
+                        if (novoProdutoId) {
+                            produtosAdicionados[i].id = novoProdutoId;
+                        }
                     }
+                }
+
+                // Preparar items para o backend
+                items = produtosAdicionados.map(produto => ({
+                    product_id: produto.id === 'outro' ? null : parseInt(produto.id),
+                    description: produto.id === 'outro' ? produto.nome : null,
+                    qty: produto.quantidade,
+                    unit_price: produto.precoUnitario,
+                    subtotal: produto.subtotal
+                }));
+
+                totalGeral = produtosAdicionados.reduce((soma, produto) => soma + produto.subtotal, 0);
+                
+                if (clienteSelecionado) {
+                    clienteId = clienteSelecionado.id;
+                    clienteNome = clienteSelecionado.name;
                 }
             }
             
-            // Preparar items para o backend
-            const items = produtosAdicionados.map(produto => ({
-                product_id: produto.id === 'outro' ? null : parseInt(produto.id),
-                description: produto.id === 'outro' ? produto.nome : null,
-                qty: produto.quantidade,
-                unit_price: produto.precoUnitario,
-                subtotal: produto.subtotal
-            }));
-            
-            const totalGeral = produtosAdicionados.reduce((soma, produto) => soma + produto.subtotal, 0);
-            
             const formData = {
-                client_id: clienteSelecionado ? clienteSelecionado.id : null,
+                client_id: clienteId,
+                client_name: clienteNome,
                 total: totalGeral,
                 notes: document.getElementById('observacoes').value,
                 items: items,
@@ -1186,6 +1324,12 @@
             outroInput.value = '';
             valorInput.value = '';
             document.getElementById('salvar_produto').checked = false;
+            
+            // Resetar valor manual
+            const valorManualInput = document.getElementById('valor_manual');
+            if (valorManualInput) {
+                valorManualInput.value = '';
+            }
             
             // Resetar produtos
             produtosAdicionados = [];
@@ -1252,6 +1396,13 @@
             renderizarProdutos();
             calcularTotalGeral();
             atualizarBotaoSalvar();
+            
+            // Inicializar modo manual se necessário
+            const valorManualInput = document.getElementById('valor_manual');
+            const produtoServicoDesabilitado = valorManualInput && valorManualInput.parentElement.style.display !== 'none';
+            if (produtoServicoDesabilitado) {
+                atualizarBotaoSalvar();
+            }
         });
         
         // Sistema de Modais
