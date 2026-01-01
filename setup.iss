@@ -42,19 +42,12 @@ Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDesc
 Name: "quicklaunchicon"; Description: "Criar atalho na barra de inicialização rápida"; GroupDescription: "Atalhos"; Flags: unchecked
 
 [Files]
-; Executáveis principais
-;Source: "dist\sistema_caixa.exe"; DestDir: "{app}"; Flags: ignoreversion; Tasks: 
-Source: "dist\controle_de_caixa.exe"; DestDir: "{app}"; DestName: "launcher.exe"; Flags: ignoreversion; Tasks: 
-Source: "dist\init_database.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Executável principal (único)
+Source: "dist\SistemaControleCaixa.exe"; DestDir: "{app}"; DestName: "launcher.exe"; Flags: ignoreversion
 
 ; Arquivos do sistema (templates, static, etc.)
 Source: "templates\*"; DestDir: "{app}\templates"; Flags: recursesubdirs createallsubdirs
 Source: "config.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_db.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "reset_database.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_payment_methods.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_system_config.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -66,21 +59,19 @@ Source: "app\*"; DestDir: "{app}\app"; Flags: recursesubdirs createallsubdirs ig
 Source: "scripts\*"; DestDir: "{app}\scripts"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\launcher.exe"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}"
-Name: "{group}\{#MyAppName} (Servidor)"; Filename: "{app}\controle_de_caixa.exe"; Parameters: "--server"; IconFilename: "{app}\logo.ico"; Comment: "Iniciar servidor diretamente"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}.server"
-Name: "{group}\Inicializar Banco de Dados"; Filename: "{app}\init_database.exe"; IconFilename: "{app}\logo.ico"; Comment: "Inicializar banco de dados do sistema"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}.initdb"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\launcher.exe"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
 Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: quicklaunchicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
 
 [Run]
-; Executar inicialização do banco após instalação
-Filename: "{app}\init_database.exe"; Description: "Inicializando banco de dados"; Flags: runhidden waituntilterminated
+; Executar inicialização do sistema após instalação
+Filename: "{app}\launcher.exe"; Parameters: "--init-only"; Description: "Inicializando sistema"; Flags: runhidden waituntilterminated
 
 [Registry]
 ; Registrar associação de arquivos (opcional)
 Root: HKCR; Subkey: ".scaixa"; ValueType: string; ValueName: ""; ValueData: "{#MyAssocName}"; Flags: uninsdeletekey
 Root: HKCR; Subkey: ".scaixa"; ValueType: string; ValueName: "Content Type"; ValueData: "application/x-sistema-caixa"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "{#MyAssocName}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\logo.ico,0"; Flags: uninsdeletekey
 Root: HKCR; Subkey: "{#MyAssocName}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\launcher.exe"" ""%1"""; Flags: uninsdeletekey
 
 ; Informações do aplicativo no Adicionar/Remover Programas
@@ -94,10 +85,9 @@ Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyApp
 
 [UninstallDelete]
 ; Remover arquivos temporários (NÃO remover o banco de dados aqui)
-Type: filesandordirs; Name: "{app}\launcher.log"
+Type: filesandordirs; Name: "{app}\SistemaControleCaixa.log"
 Type: filesandordirs; Name: "{app}\__pycache__"
 Type: filesandordirs; Name: "{app}\app\__pycache__"
-Type: files; Name: "{app}\init_database.exe"
 
 [UninstallRun]
 ; Não executar nada durante desinstalação (silencioso)

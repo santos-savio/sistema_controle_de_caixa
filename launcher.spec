@@ -71,6 +71,8 @@ hiddenimports = [
     'app.routes',
     'config',
     'init_db',
+    'python_dotenv',
+    'dotenv',
 ]
 
 # Include all submodules from the app package

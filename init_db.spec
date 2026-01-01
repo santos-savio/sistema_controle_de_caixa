@@ -54,7 +54,10 @@ try:
         'werkzeug.debug',
         'werkzeug.local',
         'sqlalchemy.dialects.sqlite',
-        'sqlalchemy.orm'
+        'sqlalchemy.orm',
+        'appdirs',
+        'python_dotenv',
+        'dotenv'
     ])
     
 except Exception as e:
