@@ -60,6 +60,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Verificar UPX (opcional)
+where upx >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] UPX nao encontrado no PATH. Binaries poderao nao ser compactados.
+) else (
+    echo [INFO] UPX encontrado.
+)
+
 :: Limpar builds anteriores
 echo [3/5] Limpando builds anteriores...
 if exist "dist" rmdir /s /q "dist"
@@ -76,7 +84,7 @@ echo.
 echo --------------------------------------------------------------------
 echo    Compilando: launcher.py -> launcher.exe
 echo --------------------------------------------------------------------
-pyinstaller launcher.spec --clean --noconfirm
+pyinstaller --onefile launcher.spec --clean --noconfirm
 
 if errorlevel 1 (
     echo [ERRO] Falha ao compilar launcher.exe
@@ -84,13 +92,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "dist\controle_de_caixa.exe" (
+if exist "dist\controle_de_caixa.exe" (
+    set "EXE_PATH=dist\controle_de_caixa.exe"
+) else if exist "dist\controle_de_caixa\controle_de_caixa.exe" (
+    set "EXE_PATH=dist\controle_de_caixa\controle_de_caixa.exe"
+) else (
     echo [ERRO] controle_de_caixa.exe nao foi gerado
     pause
     exit /b 1
 )
 
-echo [SUCESSO] controle_de_caixa.exe compilado com sucesso!
+echo [SUCESSO] controle_de_caixa.exe compilado com sucesso! (%%EXE_PATH%%)
 
 :: Compilar init_database
 echo.
@@ -98,7 +110,7 @@ echo [4/5] Compilando init_database.exe...
 echo --------------------------------------------------------------------
 echo    Compilando: init_db.py -> init_database.exe
 echo --------------------------------------------------------------------
-pyinstaller init_db.spec --clean --noconfirm
+pyinstaller --onefile init_db.spec --clean --noconfirm
 
 if errorlevel 1 (
     echo [ERRO] Falha ao compilar init_database.exe
@@ -106,13 +118,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist "dist\init_database.exe" (
+if exist "dist\init_database.exe" (
+    set "INIT_EXE_PATH=dist\init_database.exe"
+) else if exist "dist\init_database\init_database.exe" (
+    set "INIT_EXE_PATH=dist\init_database\init_database.exe"
+) else (
     echo [ERRO] init_database.exe nao foi gerado
     pause
     exit /b 1
 )
 
-echo [SUCESSO] init_database.exe compilado com sucesso!
+echo [SUCESSO] init_database.exe compilado com sucesso! (%%INIT_EXE_PATH%%)
 
 :: Compilar instalador com Inno Setup
 echo.

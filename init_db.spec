@@ -13,10 +13,18 @@ project_root = os.path.abspath(os.getcwd())
 datas = []
 try:
     # Templates e arquivos estáticos
+    def collect_dir_files(src_dir, target_dir):
+        for root, _, files in os.walk(src_dir):
+            for f in files:
+                full = os.path.join(root, f)
+                relroot = os.path.relpath(root, src_dir)
+                dest = os.path.join(target_dir, relroot) if relroot != '.' else target_dir
+                datas.append((full, dest))
+
     if os.path.exists('templates'):
-        datas.append(('templates', 'templates'))
+        collect_dir_files('templates', 'templates')
     if os.path.exists('static'):
-        datas.append(('static', 'static'))
+        collect_dir_files('static', 'static')
     
     # Arquivos de configuração
     config_files = ['config.py', '.env']

@@ -76,6 +76,14 @@ if (-not $innosetup) {
     Write-Status "Inno Setup encontrado: $($innosetup.Source)" "SUCCESS"
 }
 
+# Verificar UPX (opcional)
+$upx = Get-Command upx -ErrorAction SilentlyContinue
+if (-not $upx) {
+    Write-Status "WARN: UPX nao encontrado no PATH. Binaries poderao nao ser compactados." "WARN"
+} else {
+    Write-Status "UPX encontrado: $($upx.Source)" "SUCCESS"
+} 
+
 # Limpar builds anteriores se solicitado
 if ($Clean) {
     Write-Status "Limpando builds anteriores..." "INFO"
@@ -94,7 +102,7 @@ Write-Host "--------------------------------------------------------------------
 Write-Host "   Compilando: launcher.py -> controle_de_caixa.exe" -ForegroundColor White
 Write-Host "--------------------------------------------------------------------" -ForegroundColor Gray
 
-$launcherResult = Start-Process -FilePath "pyinstaller" -ArgumentList "launcher.spec --clean --noconfirm" -Wait -PassThru
+$launcherResult = Start-Process -FilePath "pyinstaller" -ArgumentList "--onefile launcher.spec --clean --noconfirm" -Wait -PassThru
 
 if ($launcherResult.ExitCode -ne 0) {
     Write-Status "ERRO: Falha ao compilar controle_de_caixa.exe" "ERROR"
@@ -103,7 +111,7 @@ if ($launcherResult.ExitCode -ne 0) {
 }
 
 # Verificar se o executável foi criado
-if (-not (Test-Path "dist\controle_de_caixa.exe")) {
+if (-not (Test-Path "dist\controle_de_caixa.exe" -PathType Leaf -ErrorAction SilentlyContinue -or Test-Path "dist\controle_de_caixa\controle_de_caixa.exe" -ErrorAction SilentlyContinue)) {
     Write-Status "ERRO: controle_de_caixa.exe nao foi gerado" "ERROR"
     if (-not $NoPause) { Read-Host "Pressione Enter para sair" }
     exit 1
@@ -117,7 +125,7 @@ Write-Host "--------------------------------------------------------------------
 Write-Host "   Compilando: init_db.py -> init_database.exe" -ForegroundColor White
 Write-Host "--------------------------------------------------------------------" -ForegroundColor Gray
 
-$initDbResult = Start-Process -FilePath "pyinstaller" -ArgumentList "init_db.spec --clean --noconfirm" -Wait -PassThru
+$initDbResult = Start-Process -FilePath "pyinstaller" -ArgumentList "--onefile init_db.spec --clean --noconfirm" -Wait -PassThru
 
 if ($initDbResult.ExitCode -ne 0) {
     Write-Status "ERRO: Falha ao compilar init_database.exe" "ERROR"
@@ -126,7 +134,7 @@ if ($initDbResult.ExitCode -ne 0) {
 }
 
 # Verificar se o executável foi criado
-if (-not (Test-Path "dist\init_database.exe")) {
+if (-not (Test-Path "dist\init_database.exe" -PathType Leaf -ErrorAction SilentlyContinue -or Test-Path "dist\init_database\init_database.exe" -ErrorAction SilentlyContinue)) {
     Write-Status "ERRO: init_database.exe nao foi gerado" "ERROR"
     if (-not $NoPause) { Read-Host "Pressione Enter para sair" }
     exit 1

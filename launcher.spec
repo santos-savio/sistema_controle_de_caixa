@@ -19,11 +19,20 @@ datas = []
 templates_dir = os.path.join(project_root, 'templates')
 static_dir = os.path.join(project_root, 'static')
 
+# Helper to collect files recursively from a folder
+def collect_dir_files(src_dir, target_dir):
+    for root, _, files in os.walk(src_dir):
+        for f in files:
+            full = os.path.join(root, f)
+            relroot = os.path.relpath(root, src_dir)
+            dest = os.path.join(target_dir, relroot) if relroot != '.' else target_dir
+            datas.append((full, dest))
+
 if os.path.exists(templates_dir):
-    datas.append((templates_dir, 'templates'))
+    collect_dir_files(templates_dir, 'templates')
 
 if os.path.exists(static_dir):
-    datas.append((static_dir, 'static'))
+    collect_dir_files(static_dir, 'static')
 
 # Include logo.ico for window icon and runtime access
 logo_path = os.path.join(project_root, 'logo.ico')

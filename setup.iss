@@ -6,12 +6,12 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Sávio Gabriel"
 #define MyAppURL "https://github.com/santos-savio/sistema_controle_de_caixa"
-#define MyAppExeName "sistema_controle_de_caixa.exe"
+#define MyAppExeName "controle_de_caixa.exe"
 #define MyAppAssocName "Controle de Caixa"
 #define MyAssocName "savio.dev.br"
 
 [Setup]
-AppId={{35D8A5A-4E3F-4A5B-9B5A-2F5E5E5E5E5E}
+AppId={{35D8A5A-4E3F-4A5B-9B5A-2F5E5E5E5E5E}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -43,7 +43,7 @@ Name: "quicklaunchicon"; Description: "Criar atalho na barra de inicialização 
 
 [Files]
 ; Executável principal (único)
-Source: "dist\SistemaControleCaixa.exe"; DestDir: "{app}"; DestName: "launcher.exe"; Flags: ignoreversion
+Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 
 ; Arquivos do sistema (templates, static, etc.)
 Source: "templates\*"; DestDir: "{app}\templates"; Flags: recursesubdirs createallsubdirs
@@ -59,14 +59,14 @@ Source: "app\*"; DestDir: "{app}\app"; Flags: recursesubdirs createallsubdirs ig
 Source: "scripts\*"; DestDir: "{app}\scripts"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\launcher.exe"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: quicklaunchicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
 
 [Run]
 ; Executar inicialização do sistema após instalação
-Filename: "{app}\launcher.exe"; Parameters: "--init-only"; Description: "Inicializando sistema"; Flags: runhidden waituntilterminated
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--init-only"; Description: "Inicializando sistema"; Flags: runhidden waituntilterminated
 
 [Registry]
 ; Registrar associação de arquivos (opcional)
