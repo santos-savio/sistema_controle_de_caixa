@@ -18,12 +18,6 @@ try:
     if os.path.exists('static'):
         datas.append(('static', 'static'))
     
-    # Arquivos de configuração
-    config_files = ['config.py', '.env']
-    for config_file in config_files:
-        if os.path.exists(config_file):
-            datas.append((config_file, '.'))
-    
     # Coletar arquivos de dados do app
     app_datas = collect_data_files('app')
     datas.extend(app_datas)

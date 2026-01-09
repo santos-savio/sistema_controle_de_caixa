@@ -39,65 +39,41 @@ LanguageDetectionMethod=locale
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "Criar atalho na barra de inicialização rápida"; GroupDescription: "Atalhos"; Flags: unchecked
+Name: "quicklaunchicon"; Description: "Criar atalho na barra de Tarefas"; GroupDescription: "Atalhos"; Flags: unchecked
 
 [Files]
 ; Executáveis principais
 ;Source: "dist\sistema_caixa.exe"; DestDir: "{app}"; Flags: ignoreversion; Tasks: 
-Source: "dist\controle_de_caixa.exe"; DestDir: "{app}"; DestName: "launcher.exe"; Flags: ignoreversion; Tasks: 
-Source: "dist\init_database.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\controle_de_caixa.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion; Tasks: 
 
 ; Arquivos do sistema (templates, static, etc.)
 Source: "templates\*"; DestDir: "{app}\templates"; Flags: recursesubdirs createallsubdirs
-Source: "config.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_db.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "reset_database.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_payment_methods.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "init_system_config.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
-; Arquivos da pasta app (se existirem)
-Source: "app\*"; DestDir: "{app}\app"; Flags: recursesubdirs createallsubdirs ignoreversion
-
-; Scripts (se existirem)
-Source: "scripts\*"; DestDir: "{app}\scripts"; Flags: recursesubdirs createallsubdirs ignoreversion
-
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\launcher.exe"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}"
-Name: "{group}\{#MyAppName} (Servidor)"; Filename: "{app}\controle_de_caixa.exe"; Parameters: "--server"; IconFilename: "{app}\logo.ico"; Comment: "Iniciar servidor diretamente"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}.server"
-Name: "{group}\Inicializar Banco de Dados"; Filename: "{app}\init_database.exe"; IconFilename: "{app}\logo.ico"; Comment: "Inicializar banco de dados do sistema"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}.initdb"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\launcher.exe"; Tasks: quicklaunchicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"; AppUserModelID: "{#MyAppPublisher}.{#MyAppName}"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon; IconFilename: "{app}\logo.ico"; Comment: "Sistema de Controle de Caixa"
 
 [Run]
-; Executar inicialização do banco após instalação
-Filename: "{app}\init_database.exe"; Description: "Inicializando banco de dados"; Flags: runhidden waituntilterminated
+Filename: "{app}\{#MyAppExeName}"; Description: "Executar {#MyAppName}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Registry]
 ; Registrar associação de arquivos (opcional)
 Root: HKCR; Subkey: ".scaixa"; ValueType: string; ValueName: ""; ValueData: "{#MyAssocName}"; Flags: uninsdeletekey
 Root: HKCR; Subkey: ".scaixa"; ValueType: string; ValueName: "Content Type"; ValueData: "application/x-sistema-caixa"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "{#MyAssocName}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
 Root: HKCR; Subkey: "{#MyAssocName}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\logo.ico,0"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "{#MyAssocName}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\launcher.exe"" ""%1"""; Flags: uninsdeletekey
-
-; Informações do aplicativo no Adicionar/Remover Programas
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "DisplayName"; ValueData: "{#MyAppName}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "DisplayVersion"; ValueData: "{#MyAppVersion}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "Publisher"; ValueData: "{#MyAppPublisher}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "URLInfoAbout"; ValueData: "{#MyAppURL}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "HelpLink"; ValueData: "{#MyAppURL}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppName}"; ValueType: string; ValueName: "DisplayIcon"; ValueData: "{app}\logo.ico"
+Root: HKCR; Subkey: "{#MyAssocName}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey
 
 [UninstallDelete]
 ; Remover arquivos temporários (NÃO remover o banco de dados aqui)
 Type: filesandordirs; Name: "{app}\launcher.log"
 Type: filesandordirs; Name: "{app}\__pycache__"
-Type: filesandordirs; Name: "{app}\app\__pycache__"
-Type: files; Name: "{app}\init_database.exe"
+Type: filesandordirs; Name: "{app}\templates"
+Type: filesandordirs; Name: "{app}"
 
 [UninstallRun]
 ; Não executar nada durante desinstalação (silencioso)
@@ -236,29 +212,12 @@ begin
                   'AVISO: Esta ação não poderá ser desfeita!', 
                   mbConfirmation, MB_YESNO) = IDYES then
         begin
-          // Remover banco de dados principal
-          if FileExists(ExpandConstant('{app}\database.db')) then
+          // Remover dados armazenados em AppData (Local)
+          if DirExists(ExpandConstant('{localappdata}\Controle_de_caixa')) then
           begin
-            if not DeleteFile(ExpandConstant('{app}\database.db')) then
-              MsgBox('Aviso: Não foi possível remover o arquivo do banco de dados.', mbInformation, MB_OK);
-          end;
-          
-          // Remover diretório de dados se existir
-          if DirExists(ExpandConstant('{app}\data')) then
-          begin
-            if not DelTree(ExpandConstant('{app}\data'), True, True, True) then
+            if not DelTree(ExpandConstant('{localappdata}\Controle_de_caixa'), True, True, True) then
               MsgBox('Aviso: Não foi possível remover completamente o diretório de dados.', mbInformation, MB_OK);
           end;
-          
-          // Remover outros possíveis arquivos de dados
-          if FileExists(ExpandConstant('{app}\database.db-journal')) then
-            DeleteFile(ExpandConstant('{app}\database.db-journal'));
-            
-          if FileExists(ExpandConstant('{app}\database.db-wal')) then
-            DeleteFile(ExpandConstant('{app}\database.db-wal'));
-            
-          if FileExists(ExpandConstant('{app}\database.db-shm')) then
-            DeleteFile(ExpandConstant('{app}\database.db-shm'));
         end
         else
         begin

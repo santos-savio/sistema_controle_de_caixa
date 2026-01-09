@@ -28,7 +28,6 @@ def init_sqlite_pragmas(engine):
 
 def init_db(app):
     """Initialize DB and apply pragmas."""
-    db.init_app(app)
     with app.app_context():
         # attach pragmas to the underlying engine
         init_sqlite_pragmas(db.engine)

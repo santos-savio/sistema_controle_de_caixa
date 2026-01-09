@@ -7,8 +7,8 @@ class Config:
 
     By default the SQLite DB file is stored in the user's local app data directory.
     """
-    APP_NAME = "sistema_caixa"
-    APP_AUTHOR = "santos-savio"
+    APP_NAME = "Controle_de_caixa"
+    APP_AUTHOR = None
 
     DATA_DIR = os.path.join(user_data_dir(APP_NAME, APP_AUTHOR))
     os.makedirs(DATA_DIR, exist_ok=True)
