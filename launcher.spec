@@ -32,12 +32,6 @@ if os.path.exists(logo_path):
 else:
     logo_path = None
 
-# Include Python files that PyInstaller might miss
-python_files = ['app.py', 'config.py', 'init_db.py']
-for py_file in python_files:
-    src_path = os.path.join(project_root, py_file)
-    if os.path.exists(src_path):
-        datas.append((src_path, '.'))
 
 # Comprehensive hidden imports for Flask application and launcher
 hiddenimports = [

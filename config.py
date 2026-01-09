@@ -1,7 +1,6 @@
 import os
-from appdirs import user_data_dir
-
-
+ 
+ 
 class Config:
     """Application configuration.
 
@@ -10,7 +9,7 @@ class Config:
     APP_NAME = "Controle_de_caixa"
     APP_AUTHOR = None
 
-    DATA_DIR = os.path.join(user_data_dir(APP_NAME, APP_AUTHOR))
+    DATA_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), APP_NAME)
     os.makedirs(DATA_DIR, exist_ok=True)
 
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(DATA_DIR, 'caixa.db')}"
