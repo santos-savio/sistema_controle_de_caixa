@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, make_response
 from app.models import db, Client, Product, Transaction, TransactionItem, SystemConfig, PaymentMethod, Payment
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 
 main_bp = Blueprint('main', __name__)
 
@@ -142,14 +143,24 @@ def api_salvar_transaction():
             return jsonify({'error': 'É necessário informar pelo menos um pagamento'}), 400
         
         # Verificar se o total dos pagamentos corresponde ao total da transação
-        total_payments = sum(p['amount'] for p in payments)
-        if abs(total_payments - float(data['total'])) > 0.01:  # Tolerância de 1 centavo
+        def _to_cents(value) -> int:
+            # Normaliza string/float para centavos com arredondamento comercial
+            if value is None:
+                return 0
+            if isinstance(value, str):
+                value = value.replace(',', '.').strip()
+            dec = Decimal(str(value))
+            return int((dec * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+        total_payments_cents = sum(_to_cents(p.get('amount')) for p in payments)
+        total_transaction_cents = _to_cents(data.get('total'))
+        if abs(total_payments_cents - total_transaction_cents) > 1:  # Tolerância de 1 centavo
             return jsonify({'error': 'Total dos pagamentos não corresponde ao total da transação'}), 400
         
         # Criar nova transação
         transaction = Transaction(
             client_id=data.get('client_id') if data.get('client_id') else None,
-            total=float(data['total']),
+            total=float(Decimal(total_transaction_cents) / Decimal('100')),
             notes=data.get('notes', ''),
             date=datetime.utcnow()
         )
@@ -179,7 +190,7 @@ def api_salvar_transaction():
             payment = Payment(
                 transaction_id=transaction.id,
                 payment_method_id=payment_data['payment_method_id'],
-                amount=float(payment_data['amount'])
+                amount=float(Decimal(_to_cents(payment_data.get('amount'))) / Decimal('100'))
             )
             db.session.add(payment)
         

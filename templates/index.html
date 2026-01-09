@@ -856,6 +856,11 @@
                 outroInput.required = false;
                 outroInput.value = '';
                 valorInput.value = '';
+
+                // Auto-adicionar ao selecionar (sem precisar clicar em "Adicionar")
+                if (select.value) {
+                    adicionarProduto();
+                }
             }
         }
 
@@ -1204,7 +1209,7 @@
             if (produtoServicoDesabilitadoCheck) {
                 valorVenda = parseFloat(document.getElementById('valor_manual').value) || 0;
             } else {
-                valorVenda = parseFloat(document.getElementById('valor').value) || 0;
+                valorVenda = parseFloat(document.getElementById('total-geral').textContent) || 0;
             }
             
             if (Math.abs(totalPagamentos - valorVenda) > 0.01) {
